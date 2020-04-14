@@ -54,34 +54,34 @@
       <HintPath>$(BeatSaberDir)\Plugins\BS_Utils.dll</HintPath>
     </Reference>
     <Reference Include="StreamCore">
-      <HintPath>$(BeatSaberDir)\Plugins\StreamCore.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Libs\StreamCore.dll</HintPath>
     </Reference>
     <Reference Include="System">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Core">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Core.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Drawing">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Drawing.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Drawing.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Xml.Linq">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Xml.Linq.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Xml.Linq.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Data.DataSetExtensions">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Data.DataSetExtensions.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Data.DataSetExtensions.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Data">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Data.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Data.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Xml">
-	  <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Xml.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.Xml.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Main">
@@ -199,6 +199,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="BuildTargets.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Plugins"</PostBuildEvent>
+    <PostBuildEvent>copy /Y "$(TargetDir)$(TargetFileName)" "$(BeatSaberDir)\Plugins"</PostBuildEvent>
   </PropertyGroup>
 </Project>
