@@ -1,0 +1,13 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/nike4613/ModSaber-MetadataFileSchema/master/Schema.json",
+  "id": "EnhancedStreamChat",
+  "name": "EnhancedStreamChat",
+  "author": "",
+  "version": "0.0.1",
+  "description": "",
+  "gameVersion": "1.6.2",
+  "dependsOn": {
+
+  },
+  "features": []
+}

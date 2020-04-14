@@ -1,0 +1,10 @@
+﻿<bg xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='https://monkeymanboy.github.io/BSML-Docs/ https://raw.githubusercontent.com/monkeymanboy/BSML-Docs/gh-pages/BSMLSchema.xsd'>
+  <clickable-image src='EnhancedStreamChat.Resources.Settings.png' click-event='settings-click-event' ignore-layout='true' anchor-min-x='0.96' anchor-max-x='0.96' anchor-min-y='0.95' anchor-max-y='0.95' size-delta-x='10' preserve-aspect='true' default-color='#FFFFFF11' highlight-color='#FFFFFFFF'></clickable-image>
+  <vertical id='ChatContainer' child-align='LowerLeft' child-expand-height='false' child-expand-width='false' pref-width='~chat-width' anchor-min-y='0.032' anchor-max-y='0.032' pivot-y='0' spacing='1'>
+    <modal show-event='settings-click-event' hide-event='hide-settings' size-delta-x='~chat-width' size-delta-y='~chat-height'>
+      <vertical>
+        <button text='Close' click-event='hide-settings'></button>
+      </vertical>
+    </modal>
+  </vertical>
+</bg>
