@@ -71,6 +71,7 @@ namespace EnhancedStreamChat.Chat
                 // Work through the queue of messages that has piled up one by one until they're all gone.
                 while (_actionQueue.TryDequeue(out var action))
                 {
+                    Logger.log.Warn("Overflow!");
                     action?.Invoke();
                 }
                 // Release the lock, which will allow messages to pass through without the queue again
@@ -81,49 +82,53 @@ namespace EnhancedStreamChat.Chat
         private SemaphoreSlim _msgLock = new SemaphoreSlim(1, 1);
         private void Svc_OnTextMessageReceived(IStreamingService svc, IChatMessage msg)
         {
-            if (_chatViewController == null || !_msgLock.Wait(5))
+            if (_chatViewController == null || !_msgLock.Wait(50))
             {
                 _actionQueue.Enqueue(() => _chatViewController.OnTextMessageReceived(svc, msg));
             }
             else
             {
                 _chatViewController.OnTextMessageReceived(svc, msg);
+                _msgLock.Release();
             }
         }
 
         private void Svc_OnJoinChannel(IStreamingService svc, IChatChannel channel)
         {
-            if (_chatViewController == null || !_msgLock.Wait(5))
+            if (_chatViewController == null || !_msgLock.Wait(50))
             {
                 _actionQueue.Enqueue(() => _chatViewController?.OnJoinChannel(svc, channel));
             }
             else
             {
                 _chatViewController.OnJoinChannel(svc, channel);
+                _msgLock.Release();
             }
         }
 
         private void Svc_OnMessageCleared(IStreamingService svc, string messageId)
         {
-            if (_chatViewController == null || !_msgLock.Wait(5))
+            if (_chatViewController == null || !_msgLock.Wait(50))
             {
                 _actionQueue.Enqueue(() => _chatViewController?.OnMessageCleared(messageId));
             }
             else
             {
                 _chatViewController.OnMessageCleared(messageId);
+                _msgLock.Release();
             }
         }
 
         private void Svc_OnChatCleared(IStreamingService svc, string userId)
         {
-            if (_chatViewController == null || !_msgLock.Wait(5))
+            if (_chatViewController == null || !_msgLock.Wait(50))
             {
                 _actionQueue.Enqueue(() => _chatViewController?.OnChatCleared(userId));
             }
             else
             {
                 _chatViewController?.OnChatCleared(userId);
+                _msgLock.Release();
             }
         }
     }
