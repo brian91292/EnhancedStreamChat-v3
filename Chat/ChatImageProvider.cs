@@ -114,10 +114,5 @@ namespace EnhancedStreamChat.Chat
             }
             OnDownloadComplete?.Invoke(imageInfo);
         }
-
-        public bool TryGetImageInfo(string imageId, out EnhancedImageInfo info)
-        {
-            return _cachedImageInfo.TryGetValue(imageId, out info);
-        }
     }
 }

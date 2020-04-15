@@ -280,7 +280,7 @@ namespace EnhancedStreamChat.Chat
                 loggedInUser = twitch.LoggedInUser;
             }
             
-            string parsedMessage = await ChatMessageBuilder.ParseMessage(msg, _chatFont);
+            string parsedMessage = await ChatMessageBuilder.BuildMessage(msg, _chatFont);
 
             MainThreadInvoker.Invoke(() =>
             {
@@ -428,33 +428,19 @@ namespace EnhancedStreamChat.Chat
                         if (assetBundle.name == "main")
                         {
                             Logger.log.Info($"Main font: {font.fontNames[0]}");
-                            _chatFont = SetupFont(TMP_FontAsset.CreateFontAsset(font));
+                            _chatFont = BeatSaberUtils.SetupFont(TMP_FontAsset.CreateFontAsset(font));
                             _chatFont.name = font.fontNames[0] + " (Clone)";
                         }
                         else
                         {
                             //Logger.log.Info($"Fallback font: {font.fontNames[0]}");
-                            var fallbackFont = SetupFont(TMP_FontAsset.CreateFontAsset(font));
+                            var fallbackFont = BeatSaberUtils.SetupFont(TMP_FontAsset.CreateFontAsset(font));
                             fallbackFont.name = font.fontNames[0] + " (Clone)";
                             fallbackFonts.Add(fallbackFont);
                         }
                     }
                 }
             }
-        }
-
-        // DaNike to the rescue 
-        private static TMP_FontAsset SetupFont(TMP_FontAsset f)
-        {
-            var originalFont = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().Last(f2 => f2.name == "Teko-Medium SDF No Glow");
-            var matCopy = Instantiate(originalFont.material);
-            matCopy.mainTexture = f.material.mainTexture;
-            matCopy.mainTextureOffset = f.material.mainTextureOffset;
-            matCopy.mainTextureScale = f.material.mainTextureScale;
-            f.material = matCopy;
-            f = Instantiate(f);
-            MaterialReferenceManager.AddFontAsset(f);
-            return f;
         }
     }
 }

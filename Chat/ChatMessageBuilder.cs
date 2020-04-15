@@ -13,87 +13,99 @@ using TMPro;
 
 namespace EnhancedStreamChat.Chat
 {
+
+
     public class ChatMessageBuilder
     {
-        public static async Task<string> ParseMessage(IChatMessage msg, TMP_FontAsset font)
+        /// <summary>
+        /// This function *blocks* the calling thread, and caches all the images required to display the message, then registers them with the provided font.
+        /// </summary>
+        /// <param name="msg">The chat message to get images from</param>
+        /// <param name="font">The font to register these images to</param>
+        public static bool PrepareImages(IChatMessage msg, TMP_FontAsset font)
+        {
+            List<Task<EnhancedImageInfo>> tasks = new List<Task<EnhancedImageInfo>>();
+            HashSet<string> pendingEmoteDownloads = new HashSet<string>();
+            
+            foreach (var emote in msg.Emotes)
+            {
+                if (pendingEmoteDownloads.Contains(emote.Id))
+                {
+                    continue;
+                }
+                if (!ChatImageProvider.instance.CachedImageInfo.ContainsKey(emote.Id))
+                {
+                    pendingEmoteDownloads.Add(emote.Id);
+                    TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
+                    SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.DownloadImage(emote.Uri, "Emote", emote.Id, emote.IsAnimated, (info) =>
+                    {
+                        if (info != null)
+                        {
+                            if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            {
+                                Logger.log.Info($"Failed to register {emote.Id} in font {font.name}");
+                            }
+                        }
+                        tcs.SetResult(info);
+                    }));
+                    tasks.Add(tcs.Task);
+                }
+            }
+
+            foreach (var badge in msg.Sender.Badges)
+            {
+                if (pendingEmoteDownloads.Contains(badge.Id))
+                {
+                    continue;
+                }
+                if (!ChatImageProvider.instance.CachedImageInfo.ContainsKey(badge.Id))
+                {
+                    pendingEmoteDownloads.Add(badge.Id);
+                    TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
+                    SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.DownloadImage(badge.Uri, "Badge", badge.Id, false, (info) =>
+                    {
+                        if (info != null)
+                        {
+                            if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            {
+                                Logger.log.Info($"Failed to register {badge.Id} in font {font.name}");
+                            }
+                        }
+                        tcs.SetResult(info);
+                    }));
+                    tasks.Add(tcs.Task);
+                }
+            }
+
+            // Wait on all the resources to be ready
+            return Task.WaitAll(tasks.ToArray(), 30000);
+        } 
+
+
+        public static async Task<string> BuildMessage(IChatMessage msg, TMP_FontAsset font)
         {
             try
             {
-                List<Task<EnhancedImageInfo>> tasks = new List<Task<EnhancedImageInfo>>();
-                HashSet<string> pendingEmoteDownloads = new HashSet<string>();
-                ConcurrentDictionary<string, EnhancedImageInfo> emotes = new ConcurrentDictionary<string, EnhancedImageInfo>();
-                foreach (var emote in msg.Emotes)
+                if(!PrepareImages(msg, font))
                 {
-                    var category = "Emote";
-                    if (pendingEmoteDownloads.Contains(emote.Id))
-                    {
-                        continue;
-                    }
-
-                    if (!ChatImageProvider.instance.TryGetImageInfo(emote.Id, out var imageInfo))
-                    {
-                        pendingEmoteDownloads.Add(emote.Id);
-                        TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
-                        SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.DownloadImage(emote.Uri, category, emote.Id, emote.IsAnimated, (info) =>
-                        {
-                            if (info != null)
-                            {
-                                if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
-                                {
-                                    Logger.log.Info($"Failed to register {emote.Id} in font {font.name}");
-                                }
-                                emotes.TryAdd(emote.Id, info);
-                            }
-                            tcs.SetResult(info);
-                        }));
-                        tasks.Add(tcs.Task);
-                    }
-                    else
-                    {
-                        emotes.TryAdd(emote.Id, imageInfo);
-                    }
+                    Logger.log.Warn($"Failed to prepare images for msg \"{msg.Message}\"!");
+                    return msg.Message;
                 }
 
                 ConcurrentStack<EnhancedImageInfo> badges = new ConcurrentStack<EnhancedImageInfo>();
                 foreach (var badge in msg.Sender.Badges)
                 {
-                    var category = "Badge";
-                    if (pendingEmoteDownloads.Contains(badge.Id))
+                    if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(badge.Id, out var badgeInfo))
                     {
-                        continue;
+                        Logger.log.Warn($"Failed to find cached image info for badge \"{badge.Id}\"!");
                     }
-
-                    if (!ChatImageProvider.instance.TryGetImageInfo(badge.Id, out var imageInfo))
-                    {
-                        pendingEmoteDownloads.Add(badge.Id);
-                        TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
-                        SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.DownloadImage(badge.Uri, category, badge.Id, false, (info) =>
-                        {
-                            if (info != null)
-                            {
-                                if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
-                                {
-                                    Logger.log.Info($"Failed to register {badge.Id} in font {font.name}");
-                                }
-                                badges.Push(info);
-                            }
-                            tcs.SetResult(info);
-                        }));
-                        tasks.Add(tcs.Task);
-                    }
-                    else
-                    {
-                        badges.Push(imageInfo);
-                    }
+                    badges.Push(badgeInfo);
                 }
-
-                // Wait on all the resources to be ready
-                Task.WaitAll(tasks.ToArray(), 30000);
 
                 StringBuilder sb = new StringBuilder(msg.Message);
                 foreach (var emote in msg.Emotes)
                 {
-                    if (emotes.TryGetValue(emote.Id, out var replace))
+                    if (ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
                     {
                         //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
                         string replaceStr = char.ConvertFromUtf32(replace.Character);
