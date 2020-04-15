@@ -152,8 +152,12 @@ namespace EnhancedStreamChat.Graphics
                             if (imageInfo.AnimControllerData != null)
                             {
                                 img.animStateUpdater.controllerData = imageInfo.AnimControllerData;
+                                img.sprite = imageInfo.AnimControllerData.sprites[0];
                             }
-                            img.sprite = imageInfo.Sprite;
+                            else
+                            {
+                                img.sprite = imageInfo.Sprite;
+                            }
                             img.material = BeatSaberUtils.UINoGlow;
                             img.rectTransform.localScale = new Vector3(fontScale * 1.08f, fontScale * 1.08f, fontScale * 1.08f);
                             img.rectTransform.sizeDelta = new Vector2(imageInfo.Width, imageInfo.Height);

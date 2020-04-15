@@ -118,6 +118,9 @@ namespace EnhancedStreamChat.Chat
                 _floatingScreen = FloatingScreen.CreateFloatingScreen(new Vector2(_chatConfig.ChatWidth, _chatConfig.ChatHeight), true, _chatConfig.Position, Quaternion.Euler(_chatConfig.Rotation));
                 _floatingScreen.SetRootViewController(this, true);
                 _floatingScreen.HandleSide = FloatingScreen.Side.Bottom;
+                var renderer = _floatingScreen.handle.gameObject.GetComponent<Renderer>();
+                renderer.material = Instantiate(BeatSaberUtils.UINoGlow);
+                renderer.material.color = Color.clear;
                 //_floatingScreen.ShowHandle = _chatConfig.AllowMovement;
                 _floatingScreen.screenMover.OnRelease += floatingScreen_OnRelease;
                 _gameObject = new GameObject();
@@ -171,7 +174,6 @@ namespace EnhancedStreamChat.Chat
             _floatingScreen.ShowHandle = _chatConfig.AllowMovement;
             _floatingScreen.handle.transform.localScale = new Vector2(ChatWidth, ChatHeight);
             _floatingScreen.handle.transform.localPosition = new Vector3(0, 0, 0);
-            _floatingScreen.handle.gameObject.GetComponent<Renderer>().material = BeatSaberUtils.UINoGlow;
             foreach (var msg in _messageClearQueue)
             {
                 UpdateChatMessage(msg, true);
