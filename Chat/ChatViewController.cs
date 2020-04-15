@@ -163,13 +163,16 @@ namespace EnhancedStreamChat.Chat
 
         private void UpdateChatUI()
         {
-            Logger.log.Info("Update chat ui!");
+            rectTransform.localRotation = Quaternion.identity;
             ChatWidth = _chatConfig.ChatWidth;
             ChatHeight = _chatConfig.ChatHeight;
             ChatPosition = _chatConfig.Position;
             ChatRotation = _chatConfig.Rotation;
             _floatingScreen.ShowHandle = _chatConfig.AllowMovement;
-            foreach(var msg in _messageClearQueue)
+            _floatingScreen.handle.transform.localScale = new Vector2(ChatWidth, ChatHeight);
+            _floatingScreen.handle.transform.localPosition = new Vector3(0, 0, 0);
+            _floatingScreen.handle.gameObject.GetComponent<Renderer>().material = BeatSaberUtils.UINoGlow;
+            foreach (var msg in _messageClearQueue)
             {
                 UpdateChatMessage(msg, true);
             }
