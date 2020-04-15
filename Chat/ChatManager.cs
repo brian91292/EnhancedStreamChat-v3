@@ -16,16 +16,16 @@ namespace EnhancedStreamChat.Chat
 {
     public class ChatManager : PersistentSingleton<ChatManager>
     {
-        StreamCoreInstance sc;
+        StreamCoreInstance _sc;
         void Start()
         {
             DontDestroyOnLoad(gameObject);
-            sc = StreamCoreInstance.Create();
-            var svc = sc.RunAllServices();
-            svc.OnJoinChannel += Svc_OnJoinChannel;
-            svc.OnTextMessageReceived += Svc_OnTextMessageReceived;
-            svc.OnChatCleared += Svc_OnChatCleared;
-            svc.OnMessageCleared += Svc_OnMessageCleared;
+            _sc = StreamCoreInstance.Create();
+            var svcs = _sc.RunAllServices();
+            svcs.OnJoinChannel += (svc, channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
+            svcs.OnTextMessageReceived += (svc, msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
+            svcs.OnChatCleared += (svc, uid) => QueueOrSendMessage(svc, uid, OnClearChat);
+            svcs.OnMessageCleared += (svc, mid) => QueueOrSendMessage(svc, mid, OnClearMessage);
             MainThreadInvoker.TouchInstance();
             ChatImageProvider.TouchInstance();
             Task.Run(HandleOverflowMessageQueue);
@@ -45,6 +45,7 @@ namespace EnhancedStreamChat.Chat
         }
 
         private ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
+        private SemaphoreSlim _msgLock = new SemaphoreSlim(1, 1);
         private async Task HandleOverflowMessageQueue()
         {
             while (!_applicationIsQuitting)
@@ -79,57 +80,37 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private SemaphoreSlim _msgLock = new SemaphoreSlim(1, 1);
-        private void Svc_OnTextMessageReceived(IStreamingService svc, IChatMessage msg)
+        private void QueueOrSendMessage<T>(IStreamingService svc, T data, Action<IStreamingService, T> action)
         {
             if (_chatViewController == null || !_msgLock.Wait(50))
             {
-                _actionQueue.Enqueue(() => _chatViewController.OnTextMessageReceived(svc, msg));
+                _actionQueue.Enqueue(() => action.Invoke(svc, data));
             }
             else
             {
-                _chatViewController.OnTextMessageReceived(svc, msg);
+                action.Invoke(svc, data);
                 _msgLock.Release();
             }
         }
 
-        private void Svc_OnJoinChannel(IStreamingService svc, IChatChannel channel)
+        private void OnTextMesssageReceived(IStreamingService svc, IChatMessage msg)
         {
-            if (_chatViewController == null || !_msgLock.Wait(50))
-            {
-                _actionQueue.Enqueue(() => _chatViewController?.OnJoinChannel(svc, channel));
-            }
-            else
-            {
-                _chatViewController.OnJoinChannel(svc, channel);
-                _msgLock.Release();
-            }
+            _chatViewController.OnTextMessageReceived(svc, msg);
         }
 
-        private void Svc_OnMessageCleared(IStreamingService svc, string messageId)
+        private void OnJoinChannel(IStreamingService svc, IChatChannel channel)
         {
-            if (_chatViewController == null || !_msgLock.Wait(50))
-            {
-                _actionQueue.Enqueue(() => _chatViewController?.OnMessageCleared(messageId));
-            }
-            else
-            {
-                _chatViewController.OnMessageCleared(messageId);
-                _msgLock.Release();
-            }
+            _chatViewController.OnJoinChannel(svc, channel);
         }
 
-        private void Svc_OnChatCleared(IStreamingService svc, string userId)
+        private void OnClearMessage(IStreamingService svc, string messageId)
         {
-            if (_chatViewController == null || !_msgLock.Wait(50))
-            {
-                _actionQueue.Enqueue(() => _chatViewController?.OnChatCleared(userId));
-            }
-            else
-            {
-                _chatViewController?.OnChatCleared(userId);
-                _msgLock.Release();
-            }
+            _chatViewController.OnMessageCleared(messageId);
+        }
+
+        private void OnClearChat(IStreamingService svc, string userId)
+        {
+            _chatViewController.OnChatCleared(userId);
         }
     }
 }
