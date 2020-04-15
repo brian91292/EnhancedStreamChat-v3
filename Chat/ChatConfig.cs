@@ -51,6 +51,8 @@ namespace EnhancedStreamChat.Chat
         public int ChatHeight = 140;
         [ConfigMeta(Comment = "The size of the font")]
         public float FontSize = 3.4f;
+        [ConfigMeta(Comment = "Allow movement of the chat")]
+        public bool AllowMovement = false;
 
         [ConfigSection("Colors")]
         [ConfigMeta(Comment = "The accent color to be used on system messages")]

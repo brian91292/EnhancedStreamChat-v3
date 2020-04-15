@@ -107,7 +107,6 @@ namespace EnhancedStreamChat.Chat
                     Logger.log.Warn($"PingColor {config.PingColor} is not a valid color.");
                     _highlightColor = Color.red.ColorWithAlpha(0.1f);
                 }
-
                 UpdateChatUI();
             });
         }
@@ -119,12 +118,20 @@ namespace EnhancedStreamChat.Chat
                 _floatingScreen = FloatingScreen.CreateFloatingScreen(new Vector2(_chatConfig.ChatWidth, _chatConfig.ChatHeight), true, _chatConfig.Position, Quaternion.Euler(_chatConfig.Rotation));
                 _floatingScreen.SetRootViewController(this, true);
                 _floatingScreen.HandleSide = FloatingScreen.Side.Bottom;
-                _floatingScreen.ShowHandle = false;
+                //_floatingScreen.ShowHandle = _chatConfig.AllowMovement;
+                _floatingScreen.screenMover.OnRelease += floatingScreen_OnRelease;
                 _gameObject = new GameObject();
                 DontDestroyOnLoad(_gameObject);
                 _floatingScreen.transform.SetParent(_gameObject.transform);
                 //_floatingScreen.gameObject.GetComponent<UnityEngine.UI.Image>().enabled = false;
             }
+        }
+
+        private void floatingScreen_OnRelease(Vector3 pos, Quaternion rot)
+        {
+            ChatPosition = pos;
+            ChatRotation = rot.eulerAngles;
+            _chatConfig.Save();
         }
 
         private string BuildClearedMessage(EnhancedTextMeshProUGUI msg)
@@ -156,10 +163,12 @@ namespace EnhancedStreamChat.Chat
 
         private void UpdateChatUI()
         {
-            ChatPosition = _chatConfig.Position;
-            _floatingScreen.ScreenRotation = Quaternion.Euler(_chatConfig.Rotation);
+            Logger.log.Info("Update chat ui!");
             ChatWidth = _chatConfig.ChatWidth;
             ChatHeight = _chatConfig.ChatHeight;
+            ChatPosition = _chatConfig.Position;
+            ChatRotation = _chatConfig.Rotation;
+            _floatingScreen.ShowHandle = _chatConfig.AllowMovement;
             foreach(var msg in _messageClearQueue)
             {
                 UpdateChatMessage(msg, true);
@@ -318,7 +327,6 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.ChatWidth = value;
-                _chatConfig.Save();
                 _floatingScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
                 NotifyPropertyChanged();
             }
@@ -331,7 +339,6 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.ChatHeight = value;
-                _chatConfig.Save();
                 _floatingScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
                 NotifyPropertyChanged();
             }
@@ -344,8 +351,19 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.Position = value;
-                _chatConfig.Save();
                 _floatingScreen.ScreenPosition = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("chat-rotation")]
+        public Vector3 ChatRotation
+        {
+            get => _chatConfig.Rotation;
+            set
+            {
+                _chatConfig.Rotation = value;
+                _floatingScreen.ScreenRotation = Quaternion.Euler(value);
                 NotifyPropertyChanged();
             }
         }
