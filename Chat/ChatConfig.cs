@@ -46,7 +46,7 @@ namespace EnhancedStreamChat.Chat
         [ConfigMeta(Comment = "The world rotation of the chat")]
         public Vector3 Rotation = new Vector3(-20f, 0, 0);
         [ConfigMeta(Comment = "The width of the chat")]
-        public int ChatWidth = 130;
+        public int ChatWidth = 120;
         [ConfigMeta(Comment = "The height of the chat")]
         public int ChatHeight = 140;
         [ConfigMeta(Comment = "The size of the font")]

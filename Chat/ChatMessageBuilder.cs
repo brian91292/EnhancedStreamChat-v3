@@ -13,8 +13,6 @@ using TMPro;
 
 namespace EnhancedStreamChat.Chat
 {
-
-
     public class ChatMessageBuilder
     {
         /// <summary>
@@ -80,7 +78,6 @@ namespace EnhancedStreamChat.Chat
             // Wait on all the resources to be ready
             return Task.WaitAll(tasks.ToArray(), 30000);
         } 
-
 
         public static async Task<string> BuildMessage(IChatMessage msg, TMP_FontAsset font)
         {

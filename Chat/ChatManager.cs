@@ -71,7 +71,7 @@ namespace EnhancedStreamChat.Chat
                 // Work through the queue of messages that has piled up one by one until they're all gone.
                 while (_actionQueue.TryDequeue(out var action))
                 {
-                    Logger.log.Warn("Overflow!");
+                    //Logger.log.Warn("Overflow!");
                     action?.Invoke();
                 }
                 // Release the lock, which will allow messages to pass through without the queue again
