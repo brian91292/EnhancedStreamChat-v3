@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,17 +65,23 @@ namespace EnhancedStreamChat.Chat
                     // If _chatViewController is instantiated, wait here until the action queue has any actions.
                     while(_actionQueue.IsEmpty)
                     {
+                        //Logger.log.Info("Queue is empty.");
                         await Task.Delay(1000);
                     }
                     // Once an action is added to the queue, lock the semaphore before working through the queue.
                     await _msgLock.WaitAsync();
                 }
+                int i = 0;
+                DateTime start = DateTime.UtcNow;
+                Stopwatch stopwatch = Stopwatch.StartNew();
                 // Work through the queue of messages that has piled up one by one until they're all gone.
                 while (_actionQueue.TryDequeue(out var action))
                 {
-                    //Logger.log.Warn("Overflow!");
-                    action?.Invoke();
+                    action.Invoke();
+                    i++;
                 }
+                stopwatch.Stop();
+                Logger.log.Warn($"{i} overflowed actions were executed in {stopwatch.ElapsedTicks/TimeSpan.TicksPerMillisecond}ms.");
                 // Release the lock, which will allow messages to pass through without the queue again
                 _msgLock.Release();
             }
