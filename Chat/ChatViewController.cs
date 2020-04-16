@@ -21,6 +21,8 @@ using UnityEngine.UI;
 using StreamCore;
 using StreamCore.Services.Twitch;
 using StreamCore.Models.Twitch;
+using UnityEngine.SceneManagement;
+using BS_Utils.Utilities;
 
 namespace EnhancedStreamChat.Chat
 {
@@ -31,16 +33,17 @@ namespace EnhancedStreamChat.Chat
         private TMP_FontAsset _chatFont;
         private Queue<EnhancedTextMeshProUGUIWithBackground> _messageClearQueue = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
-        private FloatingScreen _floatingScreen;
+        private FloatingScreen _chatScreen;
         private GameObject _gameObject;
         private ChatConfig _chatConfig;
-        private Color _accentColor, _highlightColor, _pingColor;
+        private Color _accentColor, _highlightColor, _pingColor, _backgroundColor;
+        private bool _isInGame = false;
 
         protected void Awake()
         {
             ChatConfig.instance.OnConfigChanged += Instance_OnConfigUpdated;
             _chatConfig = ChatConfig.instance;
-            SetupScreen();
+            SetupScreens();
 
             _textPool = new ObjectPool<EnhancedTextMeshProUGUIWithBackground>(20,
                 Constructor: () =>
@@ -82,8 +85,23 @@ namespace EnhancedStreamChat.Chat
                 }
             );
 
+            BSEvents.menuSceneActive += BSEvents_menuSceneActive;
+            BSEvents.gameSceneActive += BSEvents_gameSceneActive;
+
             StartCoroutine(LoadFonts());
             Instance_OnConfigUpdated(ChatConfig.instance);
+        }
+
+        private void BSEvents_gameSceneActive()
+        {
+            _isInGame = true;
+            UpdateChatUI();
+        }
+
+        private void BSEvents_menuSceneActive()
+        {
+            _isInGame = false;
+            UpdateChatUI();
         }
 
         private void Instance_OnConfigUpdated(ChatConfig config)
@@ -107,26 +125,33 @@ namespace EnhancedStreamChat.Chat
                     Logger.log.Warn($"PingColor {config.PingColor} is not a valid color.");
                     _highlightColor = Color.red.ColorWithAlpha(0.1f);
                 }
+                if(!ColorUtility.TryParseHtmlString(config.BackgroundColor, out _backgroundColor))
+                {
+                    Logger.log.Warn($"PingColor {config.BackgroundColor} is not a valid color.");
+                    _backgroundColor = Color.black.ColorWithAlpha(0.4f);
+                }
                 UpdateChatUI();
             });
         }
 
-        private void SetupScreen()
+        private void SetupScreens()
         {
-            if (_floatingScreen == null)
+            if (_chatScreen == null)
             {
-                _floatingScreen = FloatingScreen.CreateFloatingScreen(new Vector2(_chatConfig.ChatWidth, _chatConfig.ChatHeight), true, _chatConfig.Position, Quaternion.Euler(_chatConfig.Rotation));
-                _floatingScreen.SetRootViewController(this, true);
-                _floatingScreen.HandleSide = FloatingScreen.Side.Bottom;
-                var renderer = _floatingScreen.handle.gameObject.GetComponent<Renderer>();
+                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(_chatConfig.ChatWidth, _chatConfig.ChatHeight), true, _chatConfig.Menu_ChatPosition, Quaternion.Euler(_chatConfig.Menu_ChatRotation));
+                _chatScreen.SetRootViewController(this, true);
+                _chatScreen.HandleSide = FloatingScreen.Side.Bottom;
+                var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
                 renderer.material = Instantiate(BeatSaberUtils.UINoGlow);
                 renderer.material.color = Color.clear;
                 //_floatingScreen.ShowHandle = _chatConfig.AllowMovement;
-                _floatingScreen.screenMover.OnRelease += floatingScreen_OnRelease;
+                _chatScreen.screenMover.OnRelease += floatingScreen_OnRelease;
                 _gameObject = new GameObject();
                 DontDestroyOnLoad(_gameObject);
-                _floatingScreen.transform.SetParent(_gameObject.transform);
-                //_floatingScreen.gameObject.GetComponent<UnityEngine.UI.Image>().enabled = false;
+                _chatScreen.transform.SetParent(_gameObject.transform);
+                var bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
+                bg.material = Instantiate(BeatSaberUtils.UINoGlow);
+                //bg.enabled = false;
             }
         }
 
@@ -151,10 +176,9 @@ namespace EnhancedStreamChat.Chat
 
         private void ClearMessage(EnhancedTextMeshProUGUIWithBackground msg)
         {
+            // Only clear non-system messages
             if (!msg.Text.ChatMessage.IsSystemMessage)
             {
-                // Only clear messages that have a ChatMessage associated with them, and that aren't system messages.
-
                 msg.Text.text = BuildClearedMessage(msg.Text);
                 msg.SubTextShown = false;
             }
@@ -169,11 +193,25 @@ namespace EnhancedStreamChat.Chat
             rectTransform.localRotation = Quaternion.identity;
             ChatWidth = _chatConfig.ChatWidth;
             ChatHeight = _chatConfig.ChatHeight;
-            ChatPosition = _chatConfig.Position;
-            ChatRotation = _chatConfig.Rotation;
-            _floatingScreen.ShowHandle = _chatConfig.AllowMovement;
-            _floatingScreen.handle.transform.localScale = new Vector2(ChatWidth, ChatHeight);
-            _floatingScreen.handle.transform.localPosition = new Vector3(0, 0, 0);
+            if (_isInGame)
+            {
+                ChatPosition = _chatConfig.Song_ChatPosition;
+                ChatRotation = _chatConfig.Song_ChatRotation;
+            }
+            else
+            {
+                ChatPosition = _chatConfig.Menu_ChatPosition;
+                ChatRotation = _chatConfig.Menu_ChatRotation;
+            }
+            AllowMovement = _chatConfig.AllowMovement;
+            FontSize = _chatConfig.FontSize;
+            _chatScreen.gameObject.GetComponent<Image>().material.color = _backgroundColor;
+            _chatScreen.handle.transform.localScale = new Vector2(ChatWidth, ChatHeight);
+            _chatScreen.handle.transform.localPosition = new Vector3(0, 0, 0);
+        }
+
+        private void UpdateChatMessages()
+        {
             foreach (var msg in _messageClearQueue)
             {
                 UpdateChatMessage(msg, true);
@@ -217,7 +255,7 @@ namespace EnhancedStreamChat.Chat
 
         private void CleanupOldMessages(bool force = false)
         {
-            while (_messageClearQueue.TryPeek(out var nextClear) && (force || nextClear.transform.localPosition.y > _chatConfig.ChatHeight))
+            while (_messageClearQueue.TryPeek(out var nextClear) && (force || nextClear.transform.localPosition.y > _chatConfig.ChatHeight + 100))
             {
                 _textPool.Free(_messageClearQueue.Dequeue());
                 //Logger.log.Info($"{_messageClearQueue.Count} messages shown");
@@ -288,12 +326,6 @@ namespace EnhancedStreamChat.Chat
                 return;
             }
 
-            IChatUser loggedInUser = null;
-            if(svc is TwitchService twitch)
-            {
-                loggedInUser = twitch.LoggedInUser;
-            }
-            
             string parsedMessage = await ChatMessageBuilder.BuildMessage(msg, _chatFont);
 
             MainThreadInvoker.Invoke(() =>
@@ -325,6 +357,18 @@ namespace EnhancedStreamChat.Chat
             Logger.log.Info("Settings clicked!");
         }
 
+        [UIValue("font-size")]
+        public float FontSize
+        {
+            get => _chatConfig.FontSize;
+            set
+            {
+                _chatConfig.FontSize = value;
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
         [UIValue("chat-width")]
         public int ChatWidth
         {
@@ -332,7 +376,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.ChatWidth = value;
-                _floatingScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
+                _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
                 NotifyPropertyChanged();
             }
         }
@@ -344,33 +388,66 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.ChatHeight = value;
-                _floatingScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
+                _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
                 NotifyPropertyChanged();
             }
         }
 
-        [UIValue("chat-position")]
+        [UIValue("menu-chat-position")]
         public Vector3 ChatPosition
         {
-            get => _chatConfig.Position;
+            get => _isInGame ? _chatConfig.Song_ChatPosition : _chatConfig.Menu_ChatPosition;
             set
             {
-                _chatConfig.Position = value;
-                _floatingScreen.ScreenPosition = value;
+                if (_isInGame)
+                {
+                    _chatConfig.Song_ChatPosition = value;
+                }
+                else
+                {
+                    _chatConfig.Menu_ChatPosition = value;
+                }
+                _chatScreen.ScreenPosition = value;
                 NotifyPropertyChanged();
             }
         }
 
-        [UIValue("chat-rotation")]
+        [UIValue("menu-chat-rotation")]
         public Vector3 ChatRotation
         {
-            get => _chatConfig.Rotation;
+            get => _isInGame ? _chatConfig.Song_ChatRotation : _chatConfig.Menu_ChatRotation;
             set
             {
-                _chatConfig.Rotation = value;
-                _floatingScreen.ScreenRotation = Quaternion.Euler(value);
+                if (_isInGame)
+                {
+                    _chatConfig.Song_ChatRotation = value;
+                }
+                else
+                {
+                    _chatConfig.Menu_ChatRotation = value;
+                }
+                _chatScreen.ScreenRotation = Quaternion.Euler(value);
                 NotifyPropertyChanged();
             }
+        }
+
+        [UIValue("allow-movement")]
+        public bool AllowMovement
+        {
+            get => _chatConfig.AllowMovement;
+            set
+            {
+                _chatConfig.AllowMovement = value;
+                _chatScreen.ShowHandle = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIAction("#hide-settings")]
+        private void HideSettings()
+        {
+            Logger.log.Info("Saving settings!");
+            _chatConfig.Save();
         }
 
         [UIObject("ChatContainer")]
