@@ -173,6 +173,7 @@
     <Compile Include="Chat\ChatMessageBuilder.cs" />
     <Compile Include="Graphics\LockBitmap.cs" />
     <Compile Include="Utilities\BeatSaberUtils.cs" />
+    <Compile Include="Utilities\ColorUtils.cs" />
     <Compile Include="Utilities\GraphicUtils.cs" />
     <Compile Include="Utilities\MainThreadInvoker.cs" />
     <Compile Include="Utilities\MathUtils.cs" />

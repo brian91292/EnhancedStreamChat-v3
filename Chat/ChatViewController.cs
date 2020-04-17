@@ -23,73 +23,27 @@ using StreamCore.Services.Twitch;
 using StreamCore.Models.Twitch;
 using UnityEngine.SceneManagement;
 using BS_Utils.Utilities;
+using BeatSaberMarkupLanguage.Components.Settings;
+using BeatSaberMarkupLanguage.Parser;
 
 namespace EnhancedStreamChat.Chat
 {
     [HotReload]
     public class ChatViewController : BSMLAutomaticViewController
     { 
-
         private TMP_FontAsset _chatFont;
         private Queue<EnhancedTextMeshProUGUIWithBackground> _messageClearQueue = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
         private FloatingScreen _chatScreen;
         private GameObject _gameObject;
         private ChatConfig _chatConfig;
-        private Color _accentColor, _highlightColor, _pingColor, _backgroundColor;
         private bool _isInGame = false;
 
-        protected void Awake()
+        private void Start()
         {
-            ChatConfig.instance.OnConfigChanged += Instance_OnConfigUpdated;
             _chatConfig = ChatConfig.instance;
-            SetupScreens();
-
-            _textPool = new ObjectPool<EnhancedTextMeshProUGUIWithBackground>(20,
-                Constructor: () =>
-                {
-                    var go = new GameObject();
-                    DontDestroyOnLoad(go);
-                    var msg = go.AddComponent<EnhancedTextMeshProUGUIWithBackground>();
-                    msg.Text.enableWordWrapping = true;
-                    msg.SubText.enableWordWrapping = true;
-                    UpdateChatMessage(msg);
-                    return msg;
-                },
-                OnAlloc: (msg) =>
-                {
-                    //txt.material = BeatSaberUtils.UINoGlow;
-                    //Logger.log.Info($"Text material is {txt.material.name}");
-                    msg.gameObject.transform.SetParent(_chatContainer.transform, false);
-                },
-                OnFree: (msg) =>
-                {
-                    try
-                    {
-                        msg.HighlightEnabled = false;
-                        msg.AccentEnabled = false;
-                        msg.SubTextShown = false;
-                        msg.Text.text = null;
-                        msg.Text.ChatMessage = null;
-                        msg.SubText.text = null;
-                        msg.SubText.ChatMessage = null;
-                        msg.gameObject.SetActive(false);
-                        msg.gameObject.transform.SetParent(rectTransform);
-                        msg.Text.ClearImages();
-                        msg.SubText.ClearImages();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.log.Error($"An exception occurred while trying to free CustomText object. {ex.ToString()}");
-                    }
-                }
-            );
-
-            BSEvents.menuSceneActive += BSEvents_menuSceneActive;
-            BSEvents.gameSceneActive += BSEvents_gameSceneActive;
-
             StartCoroutine(LoadFonts());
-            Instance_OnConfigUpdated(ChatConfig.instance);
+            SetupScreens();
         }
 
         private void BSEvents_gameSceneActive()
@@ -109,27 +63,6 @@ namespace EnhancedStreamChat.Chat
             MainThreadInvoker.Invoke(() =>
             {
                 _chatConfig = config;
-
-                if (!ColorUtility.TryParseHtmlString(config.AccentColor, out _accentColor))
-                {
-                    Logger.log.Warn($"NotifyAccentColor {config.AccentColor} is not a valid color.");
-                    _accentColor = Color.yellow;
-                }
-                if (!ColorUtility.TryParseHtmlString(config.HighlightColor, out _highlightColor))
-                {
-                    Logger.log.Warn($"NotifyHighlightColor {config.HighlightColor} is not a valid color.");
-                    _highlightColor = Color.grey.ColorWithAlpha(0.03f);
-                }
-                if (!ColorUtility.TryParseHtmlString(config.PingColor, out _pingColor))
-                {
-                    Logger.log.Warn($"PingColor {config.PingColor} is not a valid color.");
-                    _highlightColor = Color.red.ColorWithAlpha(0.1f);
-                }
-                if(!ColorUtility.TryParseHtmlString(config.BackgroundColor, out _backgroundColor))
-                {
-                    Logger.log.Warn($"PingColor {config.BackgroundColor} is not a valid color.");
-                    _backgroundColor = Color.black.ColorWithAlpha(0.4f);
-                }
                 UpdateChatUI();
             });
         }
@@ -138,13 +71,13 @@ namespace EnhancedStreamChat.Chat
         {
             if (_chatScreen == null)
             {
-                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(_chatConfig.ChatWidth, _chatConfig.ChatHeight), true, _chatConfig.Menu_ChatPosition, Quaternion.Euler(_chatConfig.Menu_ChatRotation));
+                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.Euler(ChatRotation));
                 _chatScreen.SetRootViewController(this, true);
                 _chatScreen.HandleSide = FloatingScreen.Side.Bottom;
                 var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
                 renderer.material = Instantiate(BeatSaberUtils.UINoGlow);
                 renderer.material.color = Color.clear;
-                //_floatingScreen.ShowHandle = _chatConfig.AllowMovement;
+                _chatScreen.ShowHandle = _chatConfig.AllowMovement;
                 _chatScreen.screenMover.OnRelease += floatingScreen_OnRelease;
                 _gameObject = new GameObject();
                 DontDestroyOnLoad(_gameObject);
@@ -193,21 +126,17 @@ namespace EnhancedStreamChat.Chat
             rectTransform.localRotation = Quaternion.identity;
             ChatWidth = _chatConfig.ChatWidth;
             ChatHeight = _chatConfig.ChatHeight;
-            if (_isInGame)
-            {
-                ChatPosition = _chatConfig.Song_ChatPosition;
-                ChatRotation = _chatConfig.Song_ChatRotation;
-            }
-            else
-            {
-                ChatPosition = _chatConfig.Menu_ChatPosition;
-                ChatRotation = _chatConfig.Menu_ChatRotation;
-            }
             AllowMovement = _chatConfig.AllowMovement;
             FontSize = _chatConfig.FontSize;
-            _chatScreen.gameObject.GetComponent<Image>().material.color = _backgroundColor;
+            AccentColor = _chatConfig.AccentColor.ToColor();
+            HighlightColor = _chatConfig.HighlightColor.ToColor();
+            BackgroundColor = _chatConfig.BackgroundColor.ToColor();
+            PingColor = _chatConfig.PingColor.ToColor();
+            NotifyPropertyChanged(nameof(ChatPosition));
+            NotifyPropertyChanged(nameof(ChatRotation));
             _chatScreen.handle.transform.localScale = new Vector2(ChatWidth, ChatHeight);
             _chatScreen.handle.transform.localPosition = new Vector3(0, 0, 0);
+            UpdateChatMessages();
         }
 
         private void UpdateChatMessages()
@@ -237,8 +166,8 @@ namespace EnhancedStreamChat.Chat
 
             if (msg.Text.ChatMessage != null)
             {
-                msg.HighlightColor = msg.Text.ChatMessage.IsPing ? _pingColor : _highlightColor;
-                msg.AccentColor = _accentColor;
+                msg.HighlightColor = msg.Text.ChatMessage.IsPing ? PingColor : HighlightColor;
+                msg.AccentColor = AccentColor;
                 msg.HighlightEnabled = msg.Text.ChatMessage.IsHighlighted || msg.Text.ChatMessage.IsPing;
                 msg.AccentEnabled = !msg.Text.ChatMessage.IsPing && (msg.HighlightEnabled || msg.SubText.ChatMessage != null);
             }
@@ -351,10 +280,78 @@ namespace EnhancedStreamChat.Chat
             });
         }
 
-        [UIAction("on-settings-clicked")]
-        private void OnSettingsClick()
+        [UIParams]
+        internal BSMLParserParams parserParams;
+
+        [UIComponent("background-color-setting")]
+        ColorSetting _backgroundColorSetting;
+
+        [UIComponent("accent-color-setting")]
+        ColorSetting _accentColorSetting;
+
+        [UIComponent("highlight-color-setting")]
+        ColorSetting _highlightColorSetting;
+
+        [UIComponent("ping-color-setting")]
+        ColorSetting _pingColorSetting;
+
+        [UIObject("ChatContainer")]
+        GameObject _chatContainer;
+
+        private Color _accentColor;
+        [UIValue("accent-color")]
+        public Color AccentColor
         {
-            Logger.log.Info("Settings clicked!");
+            get => _accentColor;
+            set
+            {
+                _accentColor = value;
+                _chatConfig.AccentColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _highlightColor;
+        [UIValue("highlight-color")]
+        public Color HighlightColor
+        {
+            get => _highlightColor;
+            set
+            {
+                _highlightColor = value;
+                _chatConfig.HighlightColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _pingColor;
+        [UIValue("ping-color")]
+        public Color PingColor
+        {
+            get => _pingColor;
+            set
+            {
+                _pingColor = value;
+                _chatConfig.PingColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _backgroundColor;
+        [UIValue("background-color")]
+        public Color BackgroundColor
+        {
+            get => _backgroundColor;
+            set
+            {
+                _backgroundColor = value;
+                _chatConfig.BackgroundColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                _chatScreen.gameObject.GetComponent<Image>().material.color = value;
+                NotifyPropertyChanged();
+            }
         }
 
         [UIValue("font-size")]
@@ -365,6 +362,18 @@ namespace EnhancedStreamChat.Chat
             {
                 _chatConfig.FontSize = value;
                 UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private int _settingsWidth = 110;
+        [UIValue("settings-width")]
+        public int SettingsWidth
+        {
+            get => _settingsWidth;
+            set
+            {
+                _settingsWidth = value;
                 NotifyPropertyChanged();
             }
         }
@@ -443,19 +452,95 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
+        [UIAction("on-settings-clicked")]
+        private void OnSettingsClick()
+        {
+            Logger.log.Info("Settings clicked!");
+        }
+
         [UIAction("#hide-settings")]
-        private void HideSettings()
+        private void OnHideSettings()
         {
             Logger.log.Info("Saving settings!");
             _chatConfig.Save();
         }
 
-        [UIObject("ChatContainer")]
-        GameObject _chatContainer;
+        private void HideSettings()
+        {
+            parserParams.EmitEvent("hide-settings");
+        }
+
+        private void ShowSettings()
+        {
+            parserParams.EmitEvent("show-settings");
+        }
 
         [UIAction("#post-parse")]
         private void PostParse()
         {
+            if (_textPool == null)
+            {
+                _textPool = new ObjectPool<EnhancedTextMeshProUGUIWithBackground>(20,
+                    Constructor: () =>
+                    {
+                        var go = new GameObject();
+                        DontDestroyOnLoad(go);
+                        var msg = go.AddComponent<EnhancedTextMeshProUGUIWithBackground>();
+                        msg.Text.enableWordWrapping = true;
+                        msg.SubText.enableWordWrapping = true;
+                        UpdateChatMessage(msg);
+                        return msg;
+                    },
+                    OnAlloc: (msg) =>
+                    {
+                    //txt.material = BeatSaberUtils.UINoGlow;
+                    //Logger.log.Info($"Text material is {txt.material.name}");
+                    msg.gameObject.transform.SetParent(_chatContainer.transform, false);
+                    },
+                    OnFree: (msg) =>
+                    {
+                        try
+                        {
+                            msg.HighlightEnabled = false;
+                            msg.AccentEnabled = false;
+                            msg.SubTextShown = false;
+                            msg.Text.text = null;
+                            msg.Text.ChatMessage = null;
+                            msg.SubText.text = null;
+                            msg.SubText.ChatMessage = null;
+                            msg.gameObject.SetActive(false);
+                            msg.gameObject.transform.SetParent(rectTransform);
+                            msg.Text.ClearImages();
+                            msg.SubText.ClearImages();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.log.Error($"An exception occurred while trying to free CustomText object. {ex.ToString()}");
+                        }
+                    }
+                );
+                BSEvents.menuSceneActive += BSEvents_menuSceneActive;
+                BSEvents.gameSceneActive += BSEvents_gameSceneActive;
+                ChatConfig.instance.OnConfigChanged += Instance_OnConfigUpdated;
+                Instance_OnConfigUpdated(ChatConfig.instance);
+            }
+            // bg
+            _backgroundColorSetting.editButton.onClick.AddListener(HideSettings);
+            _backgroundColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _backgroundColorSetting.CurrentColor = _chatConfig.BackgroundColor.ToColor();
+            // accent
+            _accentColorSetting.editButton.onClick.AddListener(HideSettings);
+            _accentColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _accentColorSetting.CurrentColor = _chatConfig.AccentColor.ToColor();
+            // highlight
+            _highlightColorSetting.editButton.onClick.AddListener(HideSettings);
+            _highlightColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _highlightColorSetting.CurrentColor = _chatConfig.HighlightColor.ToColor();
+            // ping
+            _pingColorSetting.editButton.onClick.AddListener(HideSettings);
+            _pingColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _pingColorSetting.CurrentColor = _chatConfig.PingColor.ToColor();
+            
             _chatContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
@@ -501,7 +586,6 @@ namespace EnhancedStreamChat.Chat
                     LoadFont(fontLoadRequest.assetBundle, fallbackFonts);
                 }
             }
-
             foreach (var font in fallbackFonts)
             {
                 Logger.log.Info($"Adding {font.name} to fallback fonts!");

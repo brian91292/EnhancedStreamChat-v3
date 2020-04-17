@@ -27,13 +27,13 @@ namespace EnhancedStreamChat.Chat
         "        |_____  |  |   |  |    __  ||    ___||       ||       |         ",
         "         _____| |  |   |  |   |  | ||   |___ |   _   || ||_|| |         ",
         "        |_______|  |___|  |___|  |_||_______||__| |__||_|   |_|         ",
-        "     _______  __   __  _______  _______        __   __  _______         ",
-        "    |       ||  | |  ||   _   ||       |      |  | |  ||       |        ",
-        "    |       ||  |_|  ||  |_|  ||_     _|      |  |_|  ||___    |        ",
-        "    |       ||       ||       |  |   |        |       | ___|   |        ",
-        "    |      _||       ||       |  |   |        |       ||___    |        ",
-        "    |     |_ |   _   ||   _   |  |   |         |     |  ___|   |        ",
-        "    |_______||__| |__||__| |__|  |___|          |___|  |_______|        ",
+        "      _______  __   __  _______  _______        __   __  _______        ",
+        "     |       ||  | |  ||   _   ||       |      |  | |  ||       |       ",
+        "     |       ||  |_|  ||  |_|  ||_     _|      |  |_|  ||___    |       ",
+        "     |       ||       ||       |  |   |        |       | ___|   |       ",
+        "     |      _||       ||       |  |   |        |       ||___    |       ",
+        "     |     |_ |   _   ||   _   |  |   |         |     |  ___|   |       ",
+        "     |_______||__| |__||__| |__|  |___|          |___|  |_______|       ",
         "                                                                        ")]
     public class ChatConfig : ConfigBase<ChatConfig>
     {
@@ -63,7 +63,7 @@ namespace EnhancedStreamChat.Chat
 
         [ConfigSection("Colors")]
         [ConfigMeta(Comment = "The background color of the chat")]
-        public string BackgroundColor = "#00000088";
+        public string BackgroundColor = "#0000007F";
         [ConfigMeta(Comment = "The accent color to be used on system messages")]
         public string AccentColor = "#9147FFFF";
         [ConfigMeta(Comment = "The highlight color to be used on system messages")]
