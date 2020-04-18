@@ -31,7 +31,7 @@ namespace EnhancedStreamChat.Chat
     [HotReload]
     public class ChatViewController : BSMLAutomaticViewController
     { 
-        private TMP_FontAsset _chatFont;
+        private static TMP_FontAsset _chatFont;
         private Queue<EnhancedTextMeshProUGUIWithBackground> _messageClearQueue = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
         private FloatingScreen _chatScreen;
@@ -44,6 +44,108 @@ namespace EnhancedStreamChat.Chat
             _chatConfig = ChatConfig.instance;
             StartCoroutine(LoadFonts());
             SetupScreens();
+
+            if (_textPool == null)
+            {
+                _textPool = new ObjectPool<EnhancedTextMeshProUGUIWithBackground>(20,
+                    Constructor: () =>
+                    {
+                        var go = new GameObject();
+                        DontDestroyOnLoad(go);
+                        var msg = go.AddComponent<EnhancedTextMeshProUGUIWithBackground>();
+                        msg.Text.enableWordWrapping = true;
+                        msg.SubText.enableWordWrapping = true;
+                        UpdateChatMessage(msg);
+                        return msg;
+                    },
+                    OnAlloc: (msg) =>
+                    {
+                        msg.gameObject.transform.SetParent(_chatContainer.transform, false);
+                    },
+                    OnFree: (msg) =>
+                    {
+                        try
+                        {
+                            msg.HighlightEnabled = false;
+                            msg.AccentEnabled = false;
+                            msg.SubTextShown = false;
+                            msg.Text.text = null;
+                            msg.Text.ChatMessage = null;
+                            msg.SubText.text = null;
+                            msg.SubText.ChatMessage = null;
+                            msg.gameObject.SetActive(false);
+                            msg.gameObject.transform.SetParent(rectTransform);
+                            msg.Text.ClearImages();
+                            msg.SubText.ClearImages();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.log.Error($"An exception occurred while trying to free CustomText object. {ex.ToString()}");
+                        }
+                    }
+                );
+            }
+
+            BSEvents.menuSceneActive += BSEvents_menuSceneActive;
+            BSEvents.gameSceneActive += BSEvents_gameSceneActive;
+            ChatConfig.instance.OnConfigChanged += Instance_OnConfigUpdated;
+            Instance_OnConfigUpdated(ChatConfig.instance);
+        }
+
+        protected override void DidDeactivate(DeactivationType deactivationType)
+        {
+            if (deactivationType == DeactivationType.NotRemovedFromHierarchy)
+            {
+                CleanupOldMessages(true);
+            }
+            base.DidDeactivate(deactivationType);
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            BSEvents.menuSceneActive -= BSEvents_menuSceneActive;
+            BSEvents.gameSceneActive -= BSEvents_gameSceneActive;
+            ChatConfig.instance.OnConfigChanged -= Instance_OnConfigUpdated;
+            foreach(var msg in _messageClearQueue)
+            {
+                Destroy(msg);
+            }
+            _messageClearQueue.Clear();
+            Destroy(_gameObject);
+            if (_textPool != null)
+            {
+                _textPool.Dispose();
+                _textPool = null;
+            }
+            if (_chatScreen != null)
+            {
+                Destroy(_chatScreen);
+                _chatScreen = null;
+            }
+        }
+
+        [UIAction("#post-parse")]
+        private void PostParse()
+        {
+            // bg
+            _backgroundColorSetting.editButton.onClick.AddListener(HideSettings);
+            _backgroundColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _backgroundColorSetting.CurrentColor = _chatConfig.BackgroundColor.ToColor();
+            // accent
+            _accentColorSetting.editButton.onClick.AddListener(HideSettings);
+            _accentColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _accentColorSetting.CurrentColor = _chatConfig.AccentColor.ToColor();
+            // highlight
+            _highlightColorSetting.editButton.onClick.AddListener(HideSettings);
+            _highlightColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _highlightColorSetting.CurrentColor = _chatConfig.HighlightColor.ToColor();
+            // ping
+            _pingColorSetting.editButton.onClick.AddListener(HideSettings);
+            _pingColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _pingColorSetting.CurrentColor = _chatConfig.PingColor.ToColor();
+
+            _chatContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
         private void BSEvents_gameSceneActive()
@@ -475,87 +577,14 @@ namespace EnhancedStreamChat.Chat
             parserParams.EmitEvent("show-settings");
         }
 
-        [UIAction("#post-parse")]
-        private void PostParse()
-        {
-            if (_textPool == null)
-            {
-                _textPool = new ObjectPool<EnhancedTextMeshProUGUIWithBackground>(20,
-                    Constructor: () =>
-                    {
-                        var go = new GameObject();
-                        DontDestroyOnLoad(go);
-                        var msg = go.AddComponent<EnhancedTextMeshProUGUIWithBackground>();
-                        msg.Text.enableWordWrapping = true;
-                        msg.SubText.enableWordWrapping = true;
-                        UpdateChatMessage(msg);
-                        return msg;
-                    },
-                    OnAlloc: (msg) =>
-                    {
-                    //txt.material = BeatSaberUtils.UINoGlow;
-                    //Logger.log.Info($"Text material is {txt.material.name}");
-                    msg.gameObject.transform.SetParent(_chatContainer.transform, false);
-                    },
-                    OnFree: (msg) =>
-                    {
-                        try
-                        {
-                            msg.HighlightEnabled = false;
-                            msg.AccentEnabled = false;
-                            msg.SubTextShown = false;
-                            msg.Text.text = null;
-                            msg.Text.ChatMessage = null;
-                            msg.SubText.text = null;
-                            msg.SubText.ChatMessage = null;
-                            msg.gameObject.SetActive(false);
-                            msg.gameObject.transform.SetParent(rectTransform);
-                            msg.Text.ClearImages();
-                            msg.SubText.ClearImages();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.log.Error($"An exception occurred while trying to free CustomText object. {ex.ToString()}");
-                        }
-                    }
-                );
-                BSEvents.menuSceneActive += BSEvents_menuSceneActive;
-                BSEvents.gameSceneActive += BSEvents_gameSceneActive;
-                ChatConfig.instance.OnConfigChanged += Instance_OnConfigUpdated;
-                Instance_OnConfigUpdated(ChatConfig.instance);
-            }
-            // bg
-            _backgroundColorSetting.editButton.onClick.AddListener(HideSettings);
-            _backgroundColorSetting.modalColorPicker.cancelEvent += ShowSettings;
-            _backgroundColorSetting.CurrentColor = _chatConfig.BackgroundColor.ToColor();
-            // accent
-            _accentColorSetting.editButton.onClick.AddListener(HideSettings);
-            _accentColorSetting.modalColorPicker.cancelEvent += ShowSettings;
-            _accentColorSetting.CurrentColor = _chatConfig.AccentColor.ToColor();
-            // highlight
-            _highlightColorSetting.editButton.onClick.AddListener(HideSettings);
-            _highlightColorSetting.modalColorPicker.cancelEvent += ShowSettings;
-            _highlightColorSetting.CurrentColor = _chatConfig.HighlightColor.ToColor();
-            // ping
-            _pingColorSetting.editButton.onClick.AddListener(HideSettings);
-            _pingColorSetting.modalColorPicker.cancelEvent += ShowSettings;
-            _pingColorSetting.CurrentColor = _chatConfig.PingColor.ToColor();
-            
-            _chatContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        }
-
-        protected override void DidDeactivate(DeactivationType deactivationType)
-        {
-            if(deactivationType == DeactivationType.NotRemovedFromHierarchy)
-            {
-                CleanupOldMessages(true);
-            }
-            base.DidDeactivate(deactivationType);
-        }
-
-        private List<AssetBundle> _loadedAssets = new List<AssetBundle>();
+        private static Dictionary<string, AssetBundle> _loadedAssets = new Dictionary<string, AssetBundle>();
         private IEnumerator LoadFonts()
         {
+            if(_chatFont != null)
+            {
+                yield break;
+            }
+
             string fontsPath = Path.Combine(Environment.CurrentDirectory, "Cache", "FontAssets");
             if (!Directory.Exists(fontsPath))
             {
@@ -571,8 +600,11 @@ namespace EnhancedStreamChat.Chat
             Logger.log.Info("Loading fonts");
             List<TMP_FontAsset> fallbackFonts = new List<TMP_FontAsset>();
 
-            var mainAsset = AssetBundle.LoadFromFile(mainFontPath);
-            _loadedAssets.Add(mainAsset);
+            if(!_loadedAssets.TryGetValue(mainFontPath, out var mainAsset))
+            {
+                mainAsset = AssetBundle.LoadFromFile(mainFontPath);
+                _loadedAssets.Add(mainFontPath, mainAsset);
+            }
             LoadFont(mainAsset, fallbackFonts);
 
             foreach (var fontAssetPath in Directory.GetFiles(fontsPath, "*", SearchOption.TopDirectoryOnly))
@@ -580,10 +612,14 @@ namespace EnhancedStreamChat.Chat
                 if (Path.GetFileName(fontAssetPath) != "main")
                 {
                     //Logger.log.Info($"AssetBundleName: {fontAssetPath}");
-                    var fontLoadRequest = AssetBundle.LoadFromFileAsync(fontAssetPath);
-                    yield return fontLoadRequest;
-                    _loadedAssets.Add(fontLoadRequest.assetBundle);
-                    LoadFont(fontLoadRequest.assetBundle, fallbackFonts);
+                    if (!_loadedAssets.TryGetValue(fontAssetPath, out var fontAsset))
+                    {
+                        var fontLoadRequest = AssetBundle.LoadFromFileAsync(fontAssetPath);
+                        yield return fontLoadRequest;
+                        fontAsset = fontLoadRequest.assetBundle;
+                        _loadedAssets.Add(fontAssetPath, fontAsset);
+                    }
+                    LoadFont(fontAsset, fallbackFonts);
                 }
             }
             foreach (var font in fallbackFonts)

@@ -34,15 +34,15 @@ namespace EnhancedStreamChat.Chat
         }
 
         ChatViewController _chatViewController;
-        private IEnumerator PresentChat()
-        {
-            yield return new WaitForSeconds(1);
-            _chatViewController = BeatSaberMarkupLanguage.BeatSaberUI.CreateViewController<ChatViewController>();
-        }
-
         private void BSEvents_menuSceneLoadedFresh()
         {
-            StartCoroutine(PresentChat());
+            if (_chatViewController != null)
+            {
+                Destroy(_chatViewController.gameObject);
+                _chatViewController = null;
+                MainThreadInvoker.ClearQueue();
+            }
+            _chatViewController = BeatSaberMarkupLanguage.BeatSaberUI.CreateViewController<ChatViewController>();
         }
 
         private ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();

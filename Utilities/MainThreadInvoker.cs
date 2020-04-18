@@ -29,6 +29,11 @@ namespace EnhancedStreamChat.Utilities
             }
         }
 
+        public static void ClearQueue()
+        {
+            _actions = new ConcurrentQueue<Action>();
+        }
+
         public static void Invoke(Action action)
         {
             if (action != null)
