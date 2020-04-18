@@ -25,6 +25,7 @@ using UnityEngine.SceneManagement;
 using BS_Utils.Utilities;
 using BeatSaberMarkupLanguage.Components.Settings;
 using BeatSaberMarkupLanguage.Parser;
+using VRUIControls;
 
 namespace EnhancedStreamChat.Chat
 {
@@ -32,11 +33,12 @@ namespace EnhancedStreamChat.Chat
     public class ChatViewController : BSMLAutomaticViewController
     { 
         private static TMP_FontAsset _chatFont;
-        private Queue<EnhancedTextMeshProUGUIWithBackground> _messageClearQueue = new Queue<EnhancedTextMeshProUGUIWithBackground>();
+        private Queue<EnhancedTextMeshProUGUIWithBackground> _activeChatMessages = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
         private FloatingScreen _chatScreen;
         private GameObject _gameObject;
         private ChatConfig _chatConfig;
+        private Material _chatMoverMaterial;
         private bool _isInGame = false;
 
         private void Start()
@@ -61,6 +63,7 @@ namespace EnhancedStreamChat.Chat
                     OnAlloc: (msg) =>
                     {
                         msg.gameObject.transform.SetParent(_chatContainer.transform, false);
+                        msg.gameObject.transform.SetAsFirstSibling();
                     },
                     OnFree: (msg) =>
                     {
@@ -107,11 +110,11 @@ namespace EnhancedStreamChat.Chat
             BSEvents.menuSceneActive -= BSEvents_menuSceneActive;
             BSEvents.gameSceneActive -= BSEvents_gameSceneActive;
             ChatConfig.instance.OnConfigChanged -= Instance_OnConfigUpdated;
-            foreach(var msg in _messageClearQueue)
+            foreach(var msg in _activeChatMessages)
             {
                 Destroy(msg);
             }
-            _messageClearQueue.Clear();
+            _activeChatMessages.Clear();
             Destroy(_gameObject);
             if (_textPool != null)
             {
@@ -151,13 +154,36 @@ namespace EnhancedStreamChat.Chat
         private void BSEvents_gameSceneActive()
         {
             _isInGame = true;
+            AddToVRPointer();
             UpdateChatUI();
         }
 
         private void BSEvents_menuSceneActive()
         {
             _isInGame = false;
+            AddToVRPointer();
             UpdateChatUI();
+        }
+
+        private void AddToVRPointer()
+        {
+            VRPointer pointer = null;
+            if (_isInGame)
+            {
+                pointer = Resources.FindObjectsOfTypeAll<VRPointer>().Last();
+            }
+            else
+            {
+                pointer = Resources.FindObjectsOfTypeAll<VRPointer>().First();
+            }
+            if (_chatScreen.screenMover != null)
+            {
+                DestroyImmediate(_chatScreen.screenMover);
+                _chatScreen.screenMover = pointer.gameObject.AddComponent<FloatingScreenMoverPointer>();
+                _chatScreen.screenMover.Init(_chatScreen);
+                _chatScreen.screenMover.OnRelease += floatingScreen_OnRelease;
+                _chatScreen.screenMover.transform.SetAsFirstSibling();
+            }
         }
 
         private void Instance_OnConfigUpdated(ChatConfig config)
@@ -175,14 +201,12 @@ namespace EnhancedStreamChat.Chat
             {
                 _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.Euler(ChatRotation));
                 _chatScreen.SetRootViewController(this, true);
-                _chatScreen.HandleSide = FloatingScreen.Side.Bottom;
-                var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
-                renderer.material = Instantiate(BeatSaberUtils.UINoGlow);
-                renderer.material.color = Color.clear;
-                _chatScreen.ShowHandle = _chatConfig.AllowMovement;
-                _chatScreen.screenMover.OnRelease += floatingScreen_OnRelease;
                 _gameObject = new GameObject();
                 DontDestroyOnLoad(_gameObject);
+                _chatMoverMaterial = Instantiate(BeatSaberUtils.UINoGlow);
+                _chatMoverMaterial.color = Color.clear;
+                var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
+                renderer.material = _chatMoverMaterial;
                 _chatScreen.transform.SetParent(_gameObject.transform);
                 var bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
                 bg.material = Instantiate(BeatSaberUtils.UINoGlow);
@@ -228,22 +252,31 @@ namespace EnhancedStreamChat.Chat
             rectTransform.localRotation = Quaternion.identity;
             ChatWidth = _chatConfig.ChatWidth;
             ChatHeight = _chatConfig.ChatHeight;
-            AllowMovement = _chatConfig.AllowMovement;
             FontSize = _chatConfig.FontSize;
             AccentColor = _chatConfig.AccentColor.ToColor();
             HighlightColor = _chatConfig.HighlightColor.ToColor();
             BackgroundColor = _chatConfig.BackgroundColor.ToColor();
             PingColor = _chatConfig.PingColor.ToColor();
-            NotifyPropertyChanged(nameof(ChatPosition));
-            NotifyPropertyChanged(nameof(ChatRotation));
+            if (_isInGame)
+            {
+                ChatPosition = _chatConfig.Song_ChatPosition;
+                ChatRotation = _chatConfig.Song_ChatRotation;
+            }
+            else
+            {
+                ChatPosition = _chatConfig.Menu_ChatPosition;
+                ChatRotation = _chatConfig.Menu_ChatRotation;
+            }
             _chatScreen.handle.transform.localScale = new Vector2(ChatWidth, ChatHeight);
-            _chatScreen.handle.transform.localPosition = new Vector3(0, 0, 0);
+            _chatScreen.handle.transform.localPosition = Vector3.zero;
+            _chatScreen.handle.transform.localRotation = Quaternion.identity;
+            AllowMovement = _chatConfig.AllowMovement;
             UpdateChatMessages();
         }
 
         private void UpdateChatMessages()
         {
-            foreach (var msg in _messageClearQueue)
+            foreach (var msg in _activeChatMessages)
             {
                 UpdateChatMessage(msg, true);
             }
@@ -286,9 +319,9 @@ namespace EnhancedStreamChat.Chat
 
         private void CleanupOldMessages(bool force = false)
         {
-            while (_messageClearQueue.TryPeek(out var nextClear) && (force || nextClear.transform.localPosition.y > _chatConfig.ChatHeight + 100))
+            while (_activeChatMessages.TryPeek(out var nextClear) && (force || nextClear.transform.localPosition.y > _chatConfig.ChatHeight + 100))
             {
-                _textPool.Free(_messageClearQueue.Dequeue());
+                _textPool.Free(_activeChatMessages.Dequeue());
                 //Logger.log.Info($"{_messageClearQueue.Count} messages shown");
             }
         }
@@ -299,7 +332,7 @@ namespace EnhancedStreamChat.Chat
             {
                 MainThreadInvoker.Invoke(() =>
                 {
-                    foreach (var msg in _messageClearQueue)
+                    foreach (var msg in _activeChatMessages)
                     {
                         if(msg.Text.ChatMessage == null)
                         {
@@ -318,7 +351,7 @@ namespace EnhancedStreamChat.Chat
         {
             MainThreadInvoker.Invoke(() =>
             {
-                foreach (var msg in _messageClearQueue)
+                foreach (var msg in _activeChatMessages)
                 {
                     if (msg.Text.ChatMessage == null)
                     {
@@ -341,7 +374,7 @@ namespace EnhancedStreamChat.Chat
                 newMsg.HighlightEnabled = true;
                 newMsg.HighlightColor = Color.gray.ColorWithAlpha(0.1f);
                 newMsg.gameObject.SetActive(true);
-                _messageClearQueue.Enqueue(newMsg);
+                _activeChatMessages.Enqueue(newMsg);
 
                 UpdateChatMessage(newMsg);
                 CleanupOldMessages();
@@ -374,7 +407,7 @@ namespace EnhancedStreamChat.Chat
                     newMsg.Text.ChatMessage = msg;
                     newMsg.Text.text = parsedMessage;
                     newMsg.gameObject.SetActive(true);
-                    _messageClearQueue.Enqueue(newMsg);
+                    _activeChatMessages.Enqueue(newMsg);
                     _lastMessage = newMsg;
                 }
                 UpdateChatMessage(_lastMessage);
@@ -627,7 +660,7 @@ namespace EnhancedStreamChat.Chat
                 Logger.log.Info($"Adding {font.name} to fallback fonts!");
                 _chatFont.fallbackFontAssetTable.Add(font);
             }
-            foreach (var msg in _messageClearQueue)
+            foreach (var msg in _activeChatMessages)
             {
                 msg.Text.SetAllDirty();
                 if (msg.SubTextShown)
