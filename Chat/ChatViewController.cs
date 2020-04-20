@@ -31,7 +31,7 @@ namespace EnhancedStreamChat.Chat
 {
     [HotReload]
     public class ChatViewController : BSMLAutomaticViewController
-    { 
+    {
         private static TMP_FontAsset _chatFont;
         private Queue<EnhancedTextMeshProUGUIWithBackground> _activeChatMessages = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
@@ -63,7 +63,6 @@ namespace EnhancedStreamChat.Chat
                     OnAlloc: (msg) =>
                     {
                         msg.gameObject.transform.SetParent(_chatContainer.transform, false);
-                        msg.gameObject.transform.SetAsFirstSibling();
                     },
                     OnFree: (msg) =>
                     {
@@ -92,7 +91,7 @@ namespace EnhancedStreamChat.Chat
             BSEvents.menuSceneActive += BSEvents_menuSceneActive;
             BSEvents.gameSceneActive += BSEvents_gameSceneActive;
             ChatConfig.instance.OnConfigChanged += Instance_OnConfigUpdated;
-            Instance_OnConfigUpdated(ChatConfig.instance);
+            UpdateChatUI();
         }
 
         protected override void DidDeactivate(DeactivationType deactivationType)
@@ -110,7 +109,7 @@ namespace EnhancedStreamChat.Chat
             BSEvents.menuSceneActive -= BSEvents_menuSceneActive;
             BSEvents.gameSceneActive -= BSEvents_gameSceneActive;
             ChatConfig.instance.OnConfigChanged -= Instance_OnConfigUpdated;
-            foreach(var msg in _activeChatMessages)
+            foreach (var msg in _activeChatMessages)
             {
                 Destroy(msg);
             }
@@ -190,7 +189,6 @@ namespace EnhancedStreamChat.Chat
         {
             MainThreadInvoker.Invoke(() =>
             {
-                _chatConfig = config;
                 UpdateChatUI();
             });
         }
@@ -200,6 +198,8 @@ namespace EnhancedStreamChat.Chat
             if (_chatScreen == null)
             {
                 _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.Euler(ChatRotation));
+                var canvas = _chatScreen.GetComponent<Canvas>();
+                canvas.sortingOrder = 3;
                 _chatScreen.SetRootViewController(this, true);
                 _gameObject = new GameObject();
                 DontDestroyOnLoad(_gameObject);
@@ -210,6 +210,7 @@ namespace EnhancedStreamChat.Chat
                 _chatScreen.transform.SetParent(_gameObject.transform);
                 var bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
                 bg.material = Instantiate(BeatSaberUtils.UINoGlow);
+                AddToVRPointer();
                 //bg.enabled = false;
             }
         }
@@ -241,7 +242,7 @@ namespace EnhancedStreamChat.Chat
                 msg.Text.text = BuildClearedMessage(msg.Text);
                 msg.SubTextShown = false;
             }
-            if (msg.SubText.ChatMessage != null && !msg.SubText.ChatMessage.IsSystemMessage) 
+            if (msg.SubText.ChatMessage != null && !msg.SubText.ChatMessage.IsSystemMessage)
             {
                 msg.SubText.text = BuildClearedMessage(msg.SubText);
             }
@@ -307,10 +308,10 @@ namespace EnhancedStreamChat.Chat
                 msg.AccentEnabled = !msg.Text.ChatMessage.IsPing && (msg.HighlightEnabled || msg.SubText.ChatMessage != null);
             }
 
-            if(setAllDirty)
+            if (setAllDirty)
             {
                 msg.Text.SetAllDirty();
-                if(msg.SubTextShown)
+                if (msg.SubTextShown)
                 {
                     msg.SubText.SetAllDirty();
                 }
@@ -334,7 +335,7 @@ namespace EnhancedStreamChat.Chat
                 {
                     foreach (var msg in _activeChatMessages)
                     {
-                        if(msg.Text.ChatMessage == null)
+                        if (msg.Text.ChatMessage == null)
                         {
                             continue;
                         }
@@ -370,9 +371,9 @@ namespace EnhancedStreamChat.Chat
             MainThreadInvoker.Invoke(() =>
             {
                 var newMsg = _textPool.Alloc();
-                newMsg.Text.text = $"<color=#bbbbbbbb>Success joining {channel.Id}</color>";
+                newMsg.Text.text = $"<color=#bbbbbbbb>[{svc.DisplayName}] Success joining {channel.Id}</color>";
                 newMsg.HighlightEnabled = true;
-                newMsg.HighlightColor = Color.gray.ColorWithAlpha(0.1f);
+                newMsg.HighlightColor = Color.gray.ColorWithAlpha(0.05f);
                 newMsg.gameObject.SetActive(true);
                 _activeChatMessages.Enqueue(newMsg);
 
@@ -537,7 +538,7 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        [UIValue("menu-chat-position")]
+        [UIValue("chat-position")]
         public Vector3 ChatPosition
         {
             get => _isInGame ? _chatConfig.Song_ChatPosition : _chatConfig.Menu_ChatPosition;
@@ -556,7 +557,7 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        [UIValue("menu-chat-rotation")]
+        [UIValue("chat-rotation")]
         public Vector3 ChatRotation
         {
             get => _isInGame ? _chatConfig.Song_ChatRotation : _chatConfig.Menu_ChatRotation;
@@ -613,7 +614,7 @@ namespace EnhancedStreamChat.Chat
         private static Dictionary<string, AssetBundle> _loadedAssets = new Dictionary<string, AssetBundle>();
         private IEnumerator LoadFonts()
         {
-            if(_chatFont != null)
+            if (_chatFont != null)
             {
                 yield break;
             }
@@ -633,7 +634,7 @@ namespace EnhancedStreamChat.Chat
             Logger.log.Info("Loading fonts");
             List<TMP_FontAsset> fallbackFonts = new List<TMP_FontAsset>();
 
-            if(!_loadedAssets.TryGetValue(mainFontPath, out var mainAsset))
+            if (!_loadedAssets.TryGetValue(mainFontPath, out var mainAsset))
             {
                 mainAsset = AssetBundle.LoadFromFile(mainFontPath);
                 _loadedAssets.Add(mainFontPath, mainAsset);
