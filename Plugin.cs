@@ -12,7 +12,7 @@ using EnhancedStreamChat.Chat;
 
 namespace EnhancedStreamChat
 {
-    [Plugin(RuntimeOptions.DynamicInit)]
+    [Plugin(RuntimeOptions.SingleStartInit)]
     public class Plugin
     {
         internal static Plugin instance { get; private set; }
@@ -26,7 +26,7 @@ namespace EnhancedStreamChat
             Logger.log.Debug("Logger initialized.");
         }
 
-        [OnEnable]
+        [OnStart]
         public void OnEnable()
         {
             try
@@ -39,7 +39,7 @@ namespace EnhancedStreamChat
             }
         }
 
-        [OnDisable]
+        [OnExit]
         public void OnDisable()
         {
             // TODO: actually make this disableable?
