@@ -95,6 +95,7 @@ namespace EnhancedStreamChat.Chat
                     if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(badge.Id, out var badgeInfo))
                     {
                         Logger.log.Warn($"Failed to find cached image info for badge \"{badge.Id}\"!");
+                        continue;
                     }
                     badges.Push(badgeInfo);
                 }
@@ -102,21 +103,19 @@ namespace EnhancedStreamChat.Chat
                 StringBuilder sb = new StringBuilder(msg.Message);
                 foreach (var emote in msg.Emotes)
                 {
-                    if (ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
+                    if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
                     {
-                        //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
-                        string replaceStr = char.ConvertFromUtf32(replace.Character);
-                        if(emote is TwitchEmote twitch && twitch.Bits > 0)
-                        {
-                            replaceStr = $"{replaceStr} </noparse><color={twitch.Color}><size=60%><b>{twitch.Bits}</b></size></color><noparse>";
-                        }
-                        // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
-                        sb.Replace(emote.Name, replaceStr, emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                        Logger.log.Warn($"Emote {emote.Name} was missing from the emote dict! The request to {emote.Uri} may have timed out?");
+                        continue;
                     }
-                    else
+                    //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
+                    string replaceStr = char.ConvertFromUtf32(replace.Character);
+                    if(emote is TwitchEmote twitch && twitch.Bits > 0)
                     {
-                        Logger.log.Warn($"Emote {emote.Name} was missing from the emote dict! The request may have timed out?");
+                        replaceStr = $"{replaceStr} </noparse><color={twitch.Color}><size=60%><b>{twitch.Bits}</b></size></color><noparse>";
                     }
+                    // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
+                    sb.Replace(emote.Name, replaceStr, emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
                 }
 
                 if (msg.IsSystemMessage)

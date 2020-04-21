@@ -39,6 +39,16 @@ namespace EnhancedStreamChat.Chat
     {
         public static ChatConfig instance { get; private set; } = new ChatConfig(Path.Combine(Environment.CurrentDirectory, "UserData"), Assembly.GetExecutingAssembly().GetName().Name);
 
+        [ConfigSection("Colors")]
+        [ConfigMeta(Comment = "The background color of the chat")]
+        public string BackgroundColor = "#0000007F";
+        [ConfigMeta(Comment = "The accent color to be used on system messages")]
+        public string AccentColor = "#9147FFFF";
+        [ConfigMeta(Comment = "The highlight color to be used on system messages")]
+        public string HighlightColor = "#9147FF10";
+        [ConfigMeta(Comment = "The color pings will be highlighted as in chat")]
+        public string PingColor = "#FF000022";
+
         [ConfigSection("General Layout")]
         [ConfigMeta(Comment = "The width of the chat")]
         public int ChatWidth = 120;
@@ -61,15 +71,6 @@ namespace EnhancedStreamChat.Chat
         [ConfigMeta(Comment = "The world rotation of the chat while in-song")]
         public Vector3 Song_ChatRotation = new Vector3(-20f, 0, 0);
 
-        [ConfigSection("Colors")]
-        [ConfigMeta(Comment = "The background color of the chat")]
-        public string BackgroundColor = "#0000007F";
-        [ConfigMeta(Comment = "The accent color to be used on system messages")]
-        public string AccentColor = "#9147FFFF";
-        [ConfigMeta(Comment = "The highlight color to be used on system messages")]
-        public string HighlightColor = "#9147FF10";
-        [ConfigMeta(Comment = "The color pings will be highlighted as in chat")]
-        public string PingColor = "#FF000022";
 
         private ChatConfig(string configDirectory, string configName) : base(configDirectory, configName)
         {

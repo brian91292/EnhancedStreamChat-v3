@@ -192,7 +192,13 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <EmbeddedResource Include="Chat\ChatViewController.bsml" />
-    <EmbeddedResource Include="Resources\Fonts\NotoSans-Regular" />
+    <None Include="Resources\Fonts\hk" />
+    <None Include="Resources\Fonts\jp" />
+    <None Include="Resources\Fonts\kr" />
+    <EmbeddedResource Include="Resources\Fonts\main" />
+    <None Include="Resources\Fonts\sc" />
+    <EmbeddedResource Include="Resources\Fonts\symbols" />
+    <None Include="Resources\Fonts\tc" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Twitch\" />

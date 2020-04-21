@@ -211,7 +211,6 @@ namespace EnhancedStreamChat.Chat
                 var bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
                 bg.material = Instantiate(BeatSaberUtils.UINoGlow);
                 AddToVRPointer();
-                //bg.enabled = false;
             }
         }
 
@@ -628,7 +627,13 @@ namespace EnhancedStreamChat.Chat
             string mainFontPath = Path.Combine(fontsPath, "main");
             if (!File.Exists(mainFontPath))
             {
-                File.WriteAllBytes(mainFontPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.NotoSans-Regular"));
+                File.WriteAllBytes(mainFontPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.main"));
+            }
+
+            string symbolsPath = Path.Combine(fontsPath, "symbols");
+            if (!File.Exists(symbolsPath))
+            {
+                File.WriteAllBytes(symbolsPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.symbols"));
             }
 
             Logger.log.Info("Loading fonts");
