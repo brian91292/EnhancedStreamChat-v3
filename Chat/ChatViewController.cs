@@ -32,7 +32,7 @@ namespace EnhancedStreamChat.Chat
     [HotReload]
     public class ChatViewController : BSMLAutomaticViewController
     {
-        private static TMP_FontAsset _chatFont;
+        private TMP_FontAsset _chatFont;
         private Queue<EnhancedTextMeshProUGUIWithBackground> _activeChatMessages = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
         private FloatingScreen _chatScreen;
@@ -125,6 +125,25 @@ namespace EnhancedStreamChat.Chat
             {
                 Destroy(_chatScreen);
                 _chatScreen = null;
+            }
+            if(_chatFont != null)
+            {
+                EnhancedTextMeshProUGUI.TryUnregisterFont(_chatFont);
+                Destroy(_chatFont);
+                _chatFont = null;
+            }
+            if(_chatMoverMaterial != null)
+            {
+                Destroy(_chatMoverMaterial);
+                _chatMoverMaterial = null;
+            }
+            if (_loadedAssets.Count > 0)
+            {
+                foreach (var asset in _loadedAssets.Values)
+                {
+                    asset.Unload(true);
+                }
+                _loadedAssets.Clear();
             }
         }
 

@@ -2,6 +2,7 @@
 using EnhancedStreamChat.Utilities;
 using StreamCore;
 using StreamCore.Interfaces;
+using StreamCore.Services;
 using StreamCore.Services.Twitch;
 using System;
 using System.Collections;
@@ -18,19 +19,48 @@ namespace EnhancedStreamChat.Chat
     public class ChatManager : PersistentSingleton<ChatManager>
     {
         StreamCoreInstance _sc;
-        void Start()
+        StreamingService _svcs;
+        void Awake()
         {
             DontDestroyOnLoad(gameObject);
+        }
+
+        public override void OnEnable()
+        {
+            base.OnEnable();
             _sc = StreamCoreInstance.Create();
-            var svcs = _sc.RunAllServices();
-            svcs.OnJoinChannel += (svc, channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
-            svcs.OnTextMessageReceived += (svc, msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
-            svcs.OnChatCleared += (svc, uid) => QueueOrSendMessage(svc, uid, OnClearChat);
-            svcs.OnMessageCleared += (svc, mid) => QueueOrSendMessage(svc, mid, OnClearMessage);
+            _svcs = _sc.RunAllServices();
+            _svcs.OnJoinChannel += QueueOrSendOnJoinChannel;
+            _svcs.OnTextMessageReceived += QueueOrSendOnTextMessageReceived;
+            _svcs.OnChatCleared += QueueOrSendOnClearChat;
+            _svcs.OnMessageCleared += QueueOrSendOnClearMessage;
             MainThreadInvoker.TouchInstance();
             ChatImageProvider.TouchInstance();
             Task.Run(HandleOverflowMessageQueue);
             BSEvents.menuSceneLoadedFresh += BSEvents_menuSceneLoadedFresh;
+        }
+
+        public void OnDisable()
+        {
+            if(_svcs != null)
+            {
+                _svcs.OnJoinChannel -= QueueOrSendOnJoinChannel;
+                _svcs.OnTextMessageReceived -= QueueOrSendOnTextMessageReceived;
+                _svcs.OnChatCleared -= QueueOrSendOnClearChat;
+                _svcs.OnMessageCleared -= QueueOrSendOnClearMessage;
+                BSEvents.menuSceneLoadedFresh -= BSEvents_menuSceneLoadedFresh;
+            }
+            if (_sc != null)
+            {
+                _sc.StopAllServices();
+            }
+            if(_chatViewController != null)
+            {
+                Destroy(_chatViewController.gameObject);
+                _chatViewController = null;
+            }
+            MainThreadInvoker.ClearQueue();
+            ChatImageProvider.ClearCache();
         }
 
         ChatViewController _chatViewController;
@@ -100,21 +130,25 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
+        private void QueueOrSendOnTextMessageReceived(IStreamingService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
         private void OnTextMesssageReceived(IStreamingService svc, IChatMessage msg)
         {
             _chatViewController.OnTextMessageReceived(svc, msg);
         }
 
+        private void QueueOrSendOnJoinChannel(IStreamingService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
         private void OnJoinChannel(IStreamingService svc, IChatChannel channel)
         {
             _chatViewController.OnJoinChannel(svc, channel);
         }
 
+        private void QueueOrSendOnClearMessage(IStreamingService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
         private void OnClearMessage(IStreamingService svc, string messageId)
         {
             _chatViewController.OnMessageCleared(messageId);
         }
 
+        private void QueueOrSendOnClearChat(IStreamingService svc, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
         private void OnClearChat(IStreamingService svc, string userId)
         {
             _chatViewController.OnChatCleared(userId);

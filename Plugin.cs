@@ -12,7 +12,7 @@ using EnhancedStreamChat.Chat;
 
 namespace EnhancedStreamChat
 {
-    [Plugin(RuntimeOptions.SingleStartInit)]
+    [Plugin(RuntimeOptions.DynamicInit)]
     public class Plugin
     {
         internal static Plugin instance { get; private set; }
@@ -26,12 +26,12 @@ namespace EnhancedStreamChat
             Logger.log.Debug("Logger initialized.");
         }
 
-        [OnStart]
+        [OnEnable]
         public void OnEnable()
         {
             try
             {
-                ChatManager.TouchInstance();
+                ChatManager.instance.enabled = true;
             }
             catch(Exception ex)
             {
@@ -39,11 +39,10 @@ namespace EnhancedStreamChat
             }
         }
 
-        [OnExit]
+        [OnDisable]
         public void OnDisable()
         {
-            // TODO: actually make this disableable?
-            Logger.log.Debug("OnDisable");
+            ChatManager.instance.enabled = false;
         }
     }
 }

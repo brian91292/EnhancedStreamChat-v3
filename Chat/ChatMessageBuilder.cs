@@ -76,7 +76,7 @@ namespace EnhancedStreamChat.Chat
             }
 
             // Wait on all the resources to be ready
-            return Task.WaitAll(tasks.ToArray(), 30000);
+            return Task.WaitAll(tasks.ToArray(), 15000);
         } 
 
         public static async Task<string> BuildMessage(IChatMessage msg, TMP_FontAsset font)
@@ -85,8 +85,8 @@ namespace EnhancedStreamChat.Chat
             {
                 if(!PrepareImages(msg, font))
                 {
-                    Logger.log.Warn($"Failed to prepare images for msg \"{msg.Message}\"!");
-                    return msg.Message;
+                    Logger.log.Warn($"Failed to prepare some/all images for msg \"{msg.Message}\"!");
+                    //return msg.Message;
                 }
 
                 ConcurrentStack<EnhancedImageInfo> badges = new ConcurrentStack<EnhancedImageInfo>();

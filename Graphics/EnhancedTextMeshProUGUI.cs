@@ -116,6 +116,14 @@ namespace EnhancedStreamChat.Graphics
             }
         }
 
+        public static bool TryUnregisterFont(TMP_FontAsset font)
+        {
+            lock(_lock)
+            {
+                return _fontLookupTable.Remove(font);
+            }
+        }
+
         public void ClearImages()
         {
             foreach (var enhancedImage in _currentImages)
