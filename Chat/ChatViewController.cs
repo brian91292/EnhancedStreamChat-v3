@@ -40,6 +40,7 @@ namespace EnhancedStreamChat.Chat
         private ChatConfig _chatConfig;
         private Material _chatMoverMaterial;
         private bool _isInGame = false;
+        private string _fontPath = Path.Combine(Environment.CurrentDirectory, "Cache", "FontAssets");
 
         private void Start()
         {
@@ -415,6 +416,15 @@ namespace EnhancedStreamChat.Chat
             });
         }
 
+        private void UpdateFontUI()
+        {
+            NotifyPropertyChanged(nameof(HKFontExists));
+            NotifyPropertyChanged(nameof(JPFontExists));
+            NotifyPropertyChanged(nameof(KRFontExists));
+            NotifyPropertyChanged(nameof(SCFontExists));
+            NotifyPropertyChanged(nameof(TCFontExists));
+        }
+
         [UIParams]
         internal BSMLParserParams parserParams;
 
@@ -432,6 +442,36 @@ namespace EnhancedStreamChat.Chat
 
         [UIObject("ChatContainer")]
         GameObject _chatContainer;
+
+        [UIValue("hk-font-exists")]
+        public bool HKFontExists
+        {
+            get => File.Exists(Path.Combine(_fontPath, "hk.fontasset"));
+        }
+
+        [UIValue("jp-font-exists")]
+        public bool JPFontExists
+        {
+            get => File.Exists(Path.Combine(_fontPath, "jp.fontasset"));
+        }
+
+        [UIValue("kr-font-exists")]
+        public bool KRFontExists
+        {
+            get => File.Exists(Path.Combine(_fontPath, "kr.fontasset"));
+        }
+
+        [UIValue("sc-font-exists")]
+        public bool SCFontExists
+        {
+            get => File.Exists(Path.Combine(_fontPath, "sc.fontasset"));
+        }
+
+        [UIValue("tc-font-exists")]
+        public bool TCFontExists
+        {
+            get => File.Exists(Path.Combine(_fontPath, "tc.fontasset"));
+        }
 
         private Color _accentColor;
         [UIValue("accent-color")]
@@ -618,19 +658,18 @@ namespace EnhancedStreamChat.Chat
                 yield break;
             }
 
-            string fontsPath = Path.Combine(Environment.CurrentDirectory, "Cache", "FontAssets");
-            if (!Directory.Exists(fontsPath))
+            if (!Directory.Exists(_fontPath))
             {
-                Directory.CreateDirectory(fontsPath);
+                Directory.CreateDirectory(_fontPath);
             }
 
-            string mainFontPath = Path.Combine(fontsPath, "main");
+            string mainFontPath = Path.Combine(_fontPath, "main.fontasset");
             if (!File.Exists(mainFontPath))
             {
                 File.WriteAllBytes(mainFontPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.main"));
             }
 
-            string symbolsPath = Path.Combine(fontsPath, "symbols");
+            string symbolsPath = Path.Combine(_fontPath, "symbols.fontasset");
             if (!File.Exists(symbolsPath))
             {
                 File.WriteAllBytes(symbolsPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.symbols"));
@@ -646,9 +685,9 @@ namespace EnhancedStreamChat.Chat
             }
             LoadFont(mainAsset, fallbackFonts);
 
-            foreach (var fontAssetPath in Directory.GetFiles(fontsPath, "*", SearchOption.TopDirectoryOnly))
+            foreach (var fontAssetPath in Directory.GetFiles(_fontPath, "*.fontasset", SearchOption.TopDirectoryOnly))
             {
-                if (Path.GetFileName(fontAssetPath) != "main")
+                if (Path.GetFileName(fontAssetPath) != "main.fontasset")
                 {
                     //Logger.log.Info($"AssetBundleName: {fontAssetPath}");
                     if (!_loadedAssets.TryGetValue(fontAssetPath, out var fontAsset))
