@@ -18,7 +18,8 @@ namespace EnhancedStreamChat.Chat
     {
         private ConcurrentDictionary<string, EnhancedImageInfo> _cachedImageInfo = new ConcurrentDictionary<string, EnhancedImageInfo>();
         public ReadOnlyDictionary<string, EnhancedImageInfo> CachedImageInfo { get; internal set; }
-        private char _replaceChar = '\uE000';
+        private uint _replaceChar = 0xe000;
+        
         private void Awake()
         {
             CachedImageInfo = new ReadOnlyDictionary<string, EnhancedImageInfo>(_cachedImageInfo);
@@ -106,14 +107,26 @@ namespace EnhancedStreamChat.Chat
                         Sprite = sprite,
                         Width = spriteWidth,
                         Height = spriteHeight,
-                        Character = _replaceChar++,
+                        Character = GetNextReplaceChar(),
                         AnimControllerData = animControllerData
                     };
-                    //Logger.log.Info($"Caching image info for {id}. {(_replaceChar - '\uE000')} images have been cached.");
+                    //Logger.log.Info($"Caching image info for {id}. {_cachedImageInfo.Count} images have been cached.");
                     _cachedImageInfo.TryAdd(id, imageInfo);
                 }
             }
             OnDownloadComplete?.Invoke(imageInfo);
+        }
+
+        internal static uint GetNextReplaceChar()
+        {
+            uint ret = instance._replaceChar++;
+            // If we used up all the Private Use Area characters, move onto Supplementary Private Use Area-A
+            if (instance._replaceChar > 0xF8FF && instance._replaceChar < 0xF0000)
+            {
+                Logger.log.Warn("Font is out of characters! Switching to overflow range.");
+                instance._replaceChar = 0xF0000;
+            }
+            return ret;
         }
 
         internal static void ClearCache()

@@ -13,7 +13,7 @@ namespace EnhancedStreamChat.Graphics
         public Sprite Sprite { get; internal set; }
         public int Width { get; internal set; }
         public int Height { get; internal set; }
-        public char Character { get; internal set; }
+        public uint Character { get; internal set; }
         public AnimationControllerData AnimControllerData { get; internal set; }
     }
 }

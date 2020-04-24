@@ -39,9 +39,11 @@ namespace EnhancedStreamChat.Chat
                     {
                         if (info != null)
                         {
-                            if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            while (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
                             {
-                                Logger.log.Info($"Failed to register {emote.Id} in font {font.name}");
+                                uint nextChar = ChatImageProvider.GetNextReplaceChar();
+                                Logger.log.Info($"Failed to register emote \"{emote.Id}\" in font {font.name} with character \"{Convert.ToByte(info.Character).ToString("x2")}\". Trying again with \"{Convert.ToByte(nextChar).ToString("x2")}\"");
+                                info.Character = nextChar;
                             }
                         }
                         tcs.SetResult(info);
@@ -64,9 +66,11 @@ namespace EnhancedStreamChat.Chat
                     {
                         if (info != null)
                         {
-                            if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            while (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
                             {
-                                Logger.log.Info($"Failed to register {badge.Id} in font {font.name}");
+                                uint nextChar = ChatImageProvider.GetNextReplaceChar();
+                                Logger.log.Info($"Failed to register badge \"{badge.Id}\" in font {font.name} with character \"{Convert.ToByte(info.Character).ToString("x2")}\". Trying again with \"{Convert.ToByte(nextChar).ToString("x2")}\"");
+                                info.Character = nextChar;
                             }
                         }
                         tcs.SetResult(info);
@@ -109,7 +113,7 @@ namespace EnhancedStreamChat.Chat
                         continue;
                     }
                     //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
-                    string replaceStr = char.ConvertFromUtf32(replace.Character);
+                    string replaceStr = char.ConvertFromUtf32((int)replace.Character);
                     if(emote is TwitchEmote twitch && twitch.Bits > 0)
                     {
                         replaceStr = $"{replaceStr} </noparse><color={twitch.Color}><size=60%><b>{twitch.Bits}</b></size></color><noparse>";
@@ -147,7 +151,7 @@ namespace EnhancedStreamChat.Chat
                         // Insert user badges at the beginning of the string in reverse order
                         if (badges.TryPop(out var badge))
                         {
-                            sb.Insert(0, $"{badge.Character} ");
+                            sb.Insert(0, $"{char.ConvertFromUtf32((int)badge.Character)} ");
                         }
                     }
                 }

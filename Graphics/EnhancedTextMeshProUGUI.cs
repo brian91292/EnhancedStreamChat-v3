@@ -23,7 +23,7 @@ namespace EnhancedStreamChat.Graphics
 
         public event Action OnLatePreRenderRebuildComplete;
 
-        private static Dictionary<TMP_FontAsset, Dictionary<char, EnhancedImageInfo>> _fontLookupTable { get; } = new Dictionary<TMP_FontAsset, Dictionary<char, EnhancedImageInfo>>();
+        private static Dictionary<TMP_FontAsset, Dictionary<uint, EnhancedImageInfo>> _fontLookupTable { get; } = new Dictionary<TMP_FontAsset, Dictionary<uint, EnhancedImageInfo>>();
 
         private static ObjectPool<EnhancedImage> _imagePool = new ObjectPool<EnhancedImage>(
             Constructor: () =>
@@ -68,7 +68,7 @@ namespace EnhancedStreamChat.Graphics
             }
         }
 
-        public static bool TryRegisterImageInfo(TMP_FontAsset font, char c, EnhancedImageInfo imageInfo)
+        public static bool TryRegisterImageInfo(TMP_FontAsset font, uint c, EnhancedImageInfo imageInfo)
         {
             lock (_lock)
             {
@@ -78,7 +78,7 @@ namespace EnhancedStreamChat.Graphics
                 }
                 if (!_fontLookupTable.TryGetValue(font, out var fontLookupTable))
                 {
-                    fontLookupTable = new Dictionary<char, EnhancedImageInfo>();
+                    fontLookupTable = new Dictionary<uint, EnhancedImageInfo>();
                     _fontLookupTable.Add(font, fontLookupTable);
                 }
                 if (!fontLookupTable.ContainsKey(c))
@@ -149,11 +149,26 @@ namespace EnhancedStreamChat.Graphics
                             // Skip invisible/empty/out of range chars
                             continue;
                         }
-                        if (!_fontLookupTable.TryGetValue(font, out var imageLookupTable) || !imageLookupTable.TryGetValue(text[c.index], out var imageInfo) || imageInfo is null)
+                        
+                        if(!_fontLookupTable.TryGetValue(font, out var imageLookupTable))
                         {
-                            // Skip unregistered fonts and characters that have no imageInfo registered
+                            // Skip unregistered fonts
+                            continue; 
+                        }
+
+                        uint character = text[c.index];
+                        if(c.index + 1 < text.Length && char.IsSurrogatePair(text[c.index], text[c.index + 1]))
+                        {
+                            // If it's a surrogate pair, convert the character
+                            character = (uint)char.ConvertToUtf32(text[c.index], text[c.index + 1]);
+                        }
+
+                        if (!imageLookupTable.TryGetValue(character, out var imageInfo) || imageInfo is null)
+                        {
+                            // Skip characters that have no imageInfo registered
                             continue;
                         }
+
                         var img = _imagePool.Alloc();
                         try
                         {
