@@ -30,16 +30,6 @@
           <vertical pad='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
           </vertical>
         </tab>
-        <tab tags ='settings-tab' tab-name='Font/Characters'>
-          <vertical pad='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-height='~settings-width'>
-            <checkbox-setting text='JP' hover-hint='Adds support for Japanese characters.' value='jp-font-exists' apply-on-change='true'></checkbox-setting>
-            <checkbox-setting text='KR' hover-hint='Adds support for Korean characters.' value='kr-font-exists' apply-on-change='true'></checkbox-setting>
-            <checkbox-setting text='TC' hover-hint='Adds support for Traditional Chinese characters.' value='tc-font-exists' apply-on-change='true'></checkbox-setting>
-            <checkbox-setting text='SC' hover-hint='Adds support for Simplified Chinese characters.' value='sc-font-exists' apply-on-change='true'></checkbox-setting>
-            <checkbox-setting text='HK' hover-hint='Adds support for Hong Kong Chinese characters.' value='hk-font-exists' apply-on-change='true'></checkbox-setting>
-            <button text='Download Selected' click-event='hide-font-download'></button>
-          </vertical>
-        </tab>
         <tab tags ='settings-tab' tab-name='About'>
           <vertical pad='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
           </vertical>

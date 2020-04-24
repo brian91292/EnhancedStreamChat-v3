@@ -436,15 +436,6 @@ namespace EnhancedStreamChat.Chat
             });
         }
 
-        private void UpdateFontUI()
-        {
-            NotifyPropertyChanged(nameof(HKFontExists));
-            NotifyPropertyChanged(nameof(JPFontExists));
-            NotifyPropertyChanged(nameof(KRFontExists));
-            NotifyPropertyChanged(nameof(SCFontExists));
-            NotifyPropertyChanged(nameof(TCFontExists));
-        }
-
         [UIParams]
         internal BSMLParserParams parserParams;
 
@@ -462,36 +453,6 @@ namespace EnhancedStreamChat.Chat
 
         [UIObject("ChatContainer")]
         GameObject _chatContainer;
-
-        [UIValue("hk-font-exists")]
-        public bool HKFontExists
-        {
-            get => File.Exists(Path.Combine(_fontPath, "hk.fontasset"));
-        }
-
-        [UIValue("jp-font-exists")]
-        public bool JPFontExists
-        {
-            get => File.Exists(Path.Combine(_fontPath, "jp.fontasset"));
-        }
-
-        [UIValue("kr-font-exists")]
-        public bool KRFontExists
-        {
-            get => File.Exists(Path.Combine(_fontPath, "kr.fontasset"));
-        }
-
-        [UIValue("sc-font-exists")]
-        public bool SCFontExists
-        {
-            get => File.Exists(Path.Combine(_fontPath, "sc.fontasset"));
-        }
-
-        [UIValue("tc-font-exists")]
-        public bool TCFontExists
-        {
-            get => File.Exists(Path.Combine(_fontPath, "tc.fontasset"));
-        }
 
         private Color _accentColor;
         [UIValue("accent-color")]
