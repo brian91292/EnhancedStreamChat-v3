@@ -32,7 +32,7 @@ namespace EnhancedStreamChat.Chat
     [HotReload]
     public class ChatViewController : BSMLAutomaticViewController
     {
-        private TMP_FontAsset _chatFont;
+        private EnhancedFontInfo _chatFont;
         private Queue<EnhancedTextMeshProUGUIWithBackground> _activeChatMessages = new Queue<EnhancedTextMeshProUGUIWithBackground>();
         private ObjectPool<EnhancedTextMeshProUGUIWithBackground> _textPool;
         private FloatingScreen _chatScreen;
@@ -57,7 +57,9 @@ namespace EnhancedStreamChat.Chat
                         DontDestroyOnLoad(go);
                         var msg = go.AddComponent<EnhancedTextMeshProUGUIWithBackground>();
                         msg.Text.enableWordWrapping = true;
+                        msg.Text.FontInfo = _chatFont;
                         msg.SubText.enableWordWrapping = true;
+                        msg.SubText.FontInfo = _chatFont;
                         UpdateChatMessage(msg);
                         return msg;
                     },
@@ -128,8 +130,7 @@ namespace EnhancedStreamChat.Chat
             }
             if(_chatFont != null)
             {
-                EnhancedTextMeshProUGUI.TryUnregisterFont(_chatFont);
-                Destroy(_chatFont);
+                Destroy(_chatFont.Font);
                 _chatFont = null;
             }
             if(_chatMoverMaterial != null)
@@ -304,7 +305,7 @@ namespace EnhancedStreamChat.Chat
 
         private void UpdateChatMessage(EnhancedTextMeshProUGUIWithBackground msg, bool setAllDirty = false)
         {
-            msg.Text.font = _chatFont;
+            msg.Text.font = _chatFont.Font;
             msg.Text.overflowMode = TextOverflowModes.Overflow;
             msg.Text.alignment = TextAlignmentOptions.BottomLeft;
             msg.Text.lineSpacing = 1.5f;
@@ -312,7 +313,7 @@ namespace EnhancedStreamChat.Chat
             msg.Text.fontSize = _chatConfig.FontSize;
             msg.Text.lineSpacing = 1.5f;
 
-            msg.SubText.font = _chatFont;
+            msg.SubText.font = _chatFont.Font;
             msg.SubText.overflowMode = TextOverflowModes.Overflow;
             msg.SubText.alignment = TextAlignmentOptions.BottomLeft;
             msg.SubText.color = Color.white;
@@ -722,7 +723,7 @@ namespace EnhancedStreamChat.Chat
             foreach (var font in fallbackFonts)
             {
                 Logger.log.Info($"Adding {font.name} to fallback fonts!");
-                _chatFont.fallbackFontAssetTable.Add(font);
+                _chatFont.Font.fallbackFontAssetTable.Add(font);
             }
             foreach (var msg in _activeChatMessages)
             {
@@ -745,8 +746,8 @@ namespace EnhancedStreamChat.Chat
                         if (assetBundle.name == "main")
                         {
                             Logger.log.Info($"Main font: {font.fontNames[0]}");
-                            _chatFont = BeatSaberUtils.SetupFont(TMP_FontAsset.CreateFontAsset(font));
-                            _chatFont.name = font.fontNames[0] + " (Clone)";
+                            _chatFont = new EnhancedFontInfo(BeatSaberUtils.SetupFont(TMP_FontAsset.CreateFontAsset(font)));
+                            _chatFont.Font.name = font.fontNames[0] + " (Clone)";
                         }
                         else
                         {

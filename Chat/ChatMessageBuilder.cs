@@ -20,7 +20,7 @@ namespace EnhancedStreamChat.Chat
         /// </summary>
         /// <param name="msg">The chat message to get images from</param>
         /// <param name="font">The font to register these images to</param>
-        public static bool PrepareImages(IChatMessage msg, TMP_FontAsset font)
+        public static bool PrepareImages(IChatMessage msg, EnhancedFontInfo font)
         {
             List<Task<EnhancedImageInfo>> tasks = new List<Task<EnhancedImageInfo>>();
             HashSet<string> pendingEmoteDownloads = new HashSet<string>();
@@ -39,11 +39,9 @@ namespace EnhancedStreamChat.Chat
                     {
                         if (info != null)
                         {
-                            while (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            if(!font.TryRegisterImageInfo(info, out var character))
                             {
-                                uint nextChar = ChatImageProvider.GetNextReplaceChar();
-                                Logger.log.Info($"Failed to register emote \"{emote.Id}\" in font {font.name} with character \"{Convert.ToByte(info.Character).ToString("x2")}\". Trying again with \"{Convert.ToByte(nextChar).ToString("x2")}\"");
-                                info.Character = nextChar;
+                                Logger.log.Warn($"Failed to register emote \"{emote.Id}\" in font {font.Font.name}.");
                             }
                         }
                         tcs.SetResult(info);
@@ -66,11 +64,9 @@ namespace EnhancedStreamChat.Chat
                     {
                         if (info != null)
                         {
-                            while (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            if (!font.TryRegisterImageInfo(info, out var character))
                             {
-                                uint nextChar = ChatImageProvider.GetNextReplaceChar();
-                                Logger.log.Info($"Failed to register badge \"{badge.Id}\" in font {font.name} with character \"{Convert.ToByte(info.Character).ToString("x2")}\". Trying again with \"{Convert.ToByte(nextChar).ToString("x2")}\"");
-                                info.Character = nextChar;
+                                Logger.log.Warn($"Failed to register badge \"{badge.Id}\" in font {font.Font.name}.");
                             }
                         }
                         tcs.SetResult(info);
@@ -81,9 +77,10 @@ namespace EnhancedStreamChat.Chat
 
             // Wait on all the resources to be ready
             return Task.WaitAll(tasks.ToArray(), 15000);
-        } 
+        }
 
-        public static async Task<string> BuildMessage(IChatMessage msg, TMP_FontAsset font)
+
+        public static async Task<string> BuildMessage(IChatMessage msg, EnhancedFontInfo font)
         {
             try
             {
@@ -113,7 +110,13 @@ namespace EnhancedStreamChat.Chat
                         continue;
                     }
                     //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
-                    string replaceStr = char.ConvertFromUtf32((int)replace.Character);
+                    if(!font.TryGetCharacter(replace.ImageId, out uint character))
+                    {
+                        Logger.log.Warn($"Emote {emote.Name} was missing from the character dict! Font hay have run out of usable characters.");
+                        continue;
+                    }
+
+                    string replaceStr = char.ConvertFromUtf32((int)character);
                     if(emote is TwitchEmote twitch && twitch.Bits > 0)
                     {
                         replaceStr = $"{replaceStr} </noparse><color={twitch.Color}><size=60%><b>{twitch.Bits}</b></size></color><noparse>";
@@ -149,9 +152,9 @@ namespace EnhancedStreamChat.Chat
                     for (int i = 0; i < msg.Sender.Badges.Length; i++)
                     {
                         // Insert user badges at the beginning of the string in reverse order
-                        if (badges.TryPop(out var badge))
+                        if (badges.TryPop(out var badge) && font.TryGetCharacter(badge.ImageId, out var character))
                         {
-                            sb.Insert(0, $"{char.ConvertFromUtf32((int)badge.Character)} ");
+                            sb.Insert(0, $"{char.ConvertFromUtf32((int)character)} ");
                         }
                     }
                 }
