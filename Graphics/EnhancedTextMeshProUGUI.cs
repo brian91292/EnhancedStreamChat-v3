@@ -98,7 +98,7 @@ namespace EnhancedStreamChat.Graphics
                             if (imageInfo.AnimControllerData != null)
                             {
                                 img.animStateUpdater.controllerData = imageInfo.AnimControllerData;
-                                img.sprite = imageInfo.AnimControllerData.sprites[0];
+                                img.sprite = imageInfo.AnimControllerData.sprites[imageInfo.AnimControllerData.uvIndex];
                             }
                             else
                             {

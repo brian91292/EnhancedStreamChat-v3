@@ -10,23 +10,31 @@ namespace EnhancedStreamChat.Utilities
 {
     public class MainThreadInvoker : PersistentSingleton<MainThreadInvoker>
     {
-        //public static int MAX_INVOKES_PER_FRAME = 10;
         private static ConcurrentQueue<Action> _actions = new ConcurrentQueue<Action>();
-        private void Update()
+        private void FixedUpdate()
         {
-            //int count = 0;
-            //while(count++ < MAX_INVOKES_PER_FRAME && _actions.TryDequeue(out var action))
-            if(_actions.TryDequeue(out var action))
+            //int actionCount = 0;
+            float startTime = Time.realtimeSinceStartup;
+            while (_actions.TryDequeue(out var action))
             {
                 try
                 {
                     action?.Invoke();
+                    //actionCount++;
                 }
                 catch(Exception ex)
                 {
                     Logger.log.Error(ex);
                 }
+                if(Time.realtimeSinceStartup - startTime >= 0.0005f)
+                {
+                    break;
+                }
             }
+            //if (actionCount > 0)
+            //{
+            //    Logger.log.Debug($"Executed {actionCount} actions.");
+            //}
         }
 
         public static void ClearQueue()
