@@ -3,8 +3,6 @@ using BeatSaberMarkupLanguage.FloatingScreen;
 using BeatSaberMarkupLanguage.ViewControllers;
 using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
-using StreamCore.Interfaces;
-using StreamCore.Services;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -18,9 +16,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.TextCore;
 using UnityEngine.UI;
-using StreamCore;
-using StreamCore.Services.Twitch;
-using StreamCore.Models.Twitch;
+using ChatCore;
+using ChatCore.Services.Twitch;
+using ChatCore.Models.Twitch;
+using ChatCore.Interfaces;
+using ChatCore.Services;
 using UnityEngine.SceneManagement;
 using BS_Utils.Utilities;
 using BeatSaberMarkupLanguage.Components.Settings;
@@ -73,7 +73,7 @@ namespace EnhancedStreamChat.Chat
                         {
                             msg.HighlightEnabled = false;
                             msg.AccentEnabled = false;
-                            msg.SubTextShown = false;
+                            msg.SubTextEnabled = false;
                             msg.Text.text = null;
                             msg.Text.ChatMessage = null;
                             msg.SubText.text = null;
@@ -260,7 +260,7 @@ namespace EnhancedStreamChat.Chat
             if (!msg.Text.ChatMessage.IsSystemMessage)
             {
                 msg.Text.text = BuildClearedMessage(msg.Text);
-                msg.SubTextShown = false;
+                msg.SubTextEnabled = false;
             }
             if (msg.SubText.ChatMessage != null && !msg.SubText.ChatMessage.IsSystemMessage)
             {
@@ -331,7 +331,7 @@ namespace EnhancedStreamChat.Chat
             if (setAllDirty)
             {
                 msg.Text.SetAllDirty();
-                if (msg.SubTextShown)
+                if (msg.SubTextEnabled)
                 {
                     msg.SubText.SetAllDirty();
                 }
@@ -386,7 +386,7 @@ namespace EnhancedStreamChat.Chat
             });
         }
 
-        public void OnJoinChannel(IStreamingService svc, IChatChannel channel)
+        public void OnJoinChannel(IChatService svc, IChatChannel channel)
         {
             MainThreadInvoker.Invoke(() =>
             {
@@ -403,7 +403,7 @@ namespace EnhancedStreamChat.Chat
         }
 
         EnhancedTextMeshProUGUIWithBackground _lastMessage;
-        public async void OnTextMessageReceived(IStreamingService svc, IChatMessage msg)
+        public async void OnTextMessageReceived(IChatService svc, IChatMessage msg)
         {
             if (_chatFont is null)
             {
@@ -420,7 +420,7 @@ namespace EnhancedStreamChat.Chat
                     // If the last message received had the same id and isn't a system message, then this was a sub-message of the original and may need to be highlighted along with the original message
                     _lastMessage.SubText.text = parsedMessage;
                     _lastMessage.SubText.ChatMessage = msg;
-                    _lastMessage.SubTextShown = true;
+                    _lastMessage.SubTextEnabled = true;
                 }
                 else
                 {
@@ -689,7 +689,7 @@ namespace EnhancedStreamChat.Chat
             foreach (var msg in _activeChatMessages)
             {
                 msg.Text.SetAllDirty();
-                if (msg.SubTextShown)
+                if (msg.SubTextEnabled)
                 {
                     msg.SubText.SetAllDirty();
                 }

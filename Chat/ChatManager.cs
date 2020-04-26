@@ -1,9 +1,10 @@
 ﻿using BS_Utils.Utilities;
 using EnhancedStreamChat.Utilities;
-using StreamCore;
-using StreamCore.Interfaces;
-using StreamCore.Services;
-using StreamCore.Services.Twitch;
+using ChatCore;
+using ChatCore.Interfaces;
+using ChatCore.Logging;
+using ChatCore.Services;
+using ChatCore.Services.Twitch;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -18,8 +19,8 @@ namespace EnhancedStreamChat.Chat
 {
     public class ChatManager : PersistentSingleton<ChatManager>
     {
-        StreamCoreInstance _sc;
-        StreamingService _svcs;
+        ChatCoreInstance _sc;
+        ChatServiceMultiplexer _svcs;
         void Awake()
         {
             DontDestroyOnLoad(gameObject);
@@ -28,16 +29,31 @@ namespace EnhancedStreamChat.Chat
         public override void OnEnable()
         {
             base.OnEnable();
-            _sc = StreamCoreInstance.Create();
+            _sc = ChatCoreInstance.Create();
+            //_sc.OnLogReceived += _sc_OnLogReceived;
             _svcs = _sc.RunAllServices();
             _svcs.OnJoinChannel += QueueOrSendOnJoinChannel;
             _svcs.OnTextMessageReceived += QueueOrSendOnTextMessageReceived;
             _svcs.OnChatCleared += QueueOrSendOnClearChat;
             _svcs.OnMessageCleared += QueueOrSendOnClearMessage;
-            MainThreadInvoker.TouchInstance();
             ChatImageProvider.TouchInstance();
             Task.Run(HandleOverflowMessageQueue);
             BSEvents.menuSceneLoadedFresh += BSEvents_menuSceneLoadedFresh;
+        }
+
+        private void _sc_OnLogReceived(CustomLogLevel level, string category, string log)
+        {
+            var newLevel = level switch
+            {
+                CustomLogLevel.Critical => IPA.Logging.Logger.Level.Critical,
+                CustomLogLevel.Debug => IPA.Logging.Logger.Level.Debug,
+                CustomLogLevel.Error => IPA.Logging.Logger.Level.Error,
+                CustomLogLevel.Information => IPA.Logging.Logger.Level.Info,
+                CustomLogLevel.Trace => IPA.Logging.Logger.Level.Trace,
+                CustomLogLevel.Warning => IPA.Logging.Logger.Level.Warning,
+                _ => IPA.Logging.Logger.Level.None
+            };
+            Logger.cclog.Log(newLevel, log);
         }
 
         public void OnDisable()
@@ -52,6 +68,7 @@ namespace EnhancedStreamChat.Chat
             }
             if (_sc != null)
             {
+                //_sc.OnLogReceived -= _sc_OnLogReceived;
                 _sc.StopAllServices();
             }
             if(_chatViewController != null)
@@ -117,7 +134,7 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void QueueOrSendMessage<T>(IStreamingService svc, T data, Action<IStreamingService, T> action)
+        private void QueueOrSendMessage<T>(IChatService svc, T data, Action<IChatService, T> action)
         {
             if (_chatViewController == null || !_msgLock.Wait(50))
             {
@@ -130,26 +147,26 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void QueueOrSendOnTextMessageReceived(IStreamingService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
-        private void OnTextMesssageReceived(IStreamingService svc, IChatMessage msg)
+        private void QueueOrSendOnTextMessageReceived(IChatService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
+        private void OnTextMesssageReceived(IChatService svc, IChatMessage msg)
         {
             _chatViewController.OnTextMessageReceived(svc, msg);
         }
 
-        private void QueueOrSendOnJoinChannel(IStreamingService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
-        private void OnJoinChannel(IStreamingService svc, IChatChannel channel)
+        private void QueueOrSendOnJoinChannel(IChatService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
+        private void OnJoinChannel(IChatService svc, IChatChannel channel)
         {
             _chatViewController.OnJoinChannel(svc, channel);
         }
 
-        private void QueueOrSendOnClearMessage(IStreamingService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
-        private void OnClearMessage(IStreamingService svc, string messageId)
+        private void QueueOrSendOnClearMessage(IChatService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
+        private void OnClearMessage(IChatService svc, string messageId)
         {
             _chatViewController.OnMessageCleared(messageId);
         }
 
-        private void QueueOrSendOnClearChat(IStreamingService svc, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
-        private void OnClearChat(IStreamingService svc, string userId)
+        private void QueueOrSendOnClearChat(IChatService svc, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
+        private void OnClearChat(IChatService svc, string userId)
         {
             _chatViewController.OnChatCleared(userId);
         }

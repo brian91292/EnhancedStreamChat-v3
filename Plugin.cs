@@ -24,6 +24,7 @@ namespace EnhancedStreamChat
             instance = this;
             Logger.log = logger;
             Logger.log.Debug("Logger initialized.");
+            var config = ChatConfig.instance;
         }
 
         [OnEnable]

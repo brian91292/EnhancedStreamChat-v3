@@ -18,6 +18,7 @@
     <ReferencePath>$(ProjectDir)Refs</ReferencePath>
     <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -53,8 +54,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(BeatSaberDir)\Plugins\BS_Utils.dll</HintPath>
     </Reference>
-    <Reference Include="StreamCore">
-      <HintPath>$(BeatSaberDir)\Libs\StreamCore.dll</HintPath>
+    <Reference Include="ChatCore">
+      <HintPath>$(BeatSaberDir)\Libs\ChatCore.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.dll</HintPath>
@@ -153,7 +154,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="VRUI">
-      <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\VRUI.dll</HintPath>
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\VRUI.dll</HintPath>
     </Reference>
     <Reference Include="Zenject, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

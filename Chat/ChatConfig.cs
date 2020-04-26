@@ -1,6 +1,6 @@
-﻿using StreamCore;
-using StreamCore.Config;
-using StreamCore.Models;
+﻿using ChatCore;
+using ChatCore.Config;
+using ChatCore.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,7 +35,7 @@ namespace EnhancedStreamChat.Chat
         "     |     |_ |   _   ||   _   |  |   |         |     |  ___|   |       ",
         "     |_______||__| |__||__| |__|  |___|          |___|  |_______|       ",
         "                                                                        ")]
-    public class ChatConfig : ConfigBase<ChatConfig>
+    public class ChatConfig : StreamCoreConfigConverter<ChatConfig>
     {
         public static ChatConfig instance { get; private set; } = new ChatConfig(Path.Combine(Environment.CurrentDirectory, "UserData"), Assembly.GetExecutingAssembly().GetName().Name);
 
@@ -72,7 +72,7 @@ namespace EnhancedStreamChat.Chat
         public Vector3 Song_ChatRotation = new Vector3(-20f, 0, 0);
 
 
-        private ChatConfig(string configDirectory, string configName) : base(configDirectory, configName)
+        private ChatConfig(string configDirectory, string configName) : base(configDirectory, configName, Path.Combine(Environment.CurrentDirectory, "UserData", "StreamCore", "TwitchLoginInfo.ini"))
         {
             Logger.log.Info("Config initialized.");
         }

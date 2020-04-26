@@ -1,7 +1,7 @@
 ﻿using BeatSaberMarkupLanguage;
 using BeatSaberMarkupLanguage.Animations;
 using EnhancedStreamChat.Utilities;
-using StreamCore.Interfaces;
+using ChatCore.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TextCore;
 using UnityEngine.UI;
+using IPA.Utilities.Async;
 
 namespace EnhancedStreamChat.Graphics
 {

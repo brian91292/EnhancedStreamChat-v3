@@ -26,7 +26,7 @@
             <color-setting id='ping-color-setting' value='ping-color' text='Ping Color' apply-on-change='true'></color-setting>
           </vertical>
         </tab>
-        <tab tags ='settings-tab' tab-name='Accounts'>
+        <tab tags ='settings-tab' tab-name='Login/Channels'>
           <vertical pad='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
           </vertical>
         </tab>

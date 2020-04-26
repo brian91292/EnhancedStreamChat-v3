@@ -1,8 +1,8 @@
 ﻿using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
-using StreamCore.Interfaces;
-using StreamCore.Models;
-using StreamCore.Models.Twitch;
+using ChatCore.Interfaces;
+using ChatCore.Models;
+using ChatCore.Models.Twitch;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -116,13 +116,13 @@ namespace EnhancedStreamChat.Chat
                         continue;
                     }
 
-                    string replaceStr = char.ConvertFromUtf32((int)character);
-                    if(emote is TwitchEmote twitch && twitch.Bits > 0)
-                    {
-                        replaceStr = $"{replaceStr} </noparse><color={twitch.Color}><size=60%><b>{twitch.Bits}</b></size></color><noparse>";
-                    }
                     // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
-                    sb.Replace(emote.Name, replaceStr, emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                    sb.Replace(emote.Name, emote switch
+                    {
+                        TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0</noparse><color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color><noparse>",
+                        _ => char.ConvertFromUtf32((int)character)
+                    }, 
+                    emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
                 }
 
                 if (msg.IsSystemMessage)
