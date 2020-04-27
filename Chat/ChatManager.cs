@@ -150,7 +150,7 @@ namespace EnhancedStreamChat.Chat
         private void QueueOrSendOnTextMessageReceived(IChatService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
         private void OnTextMesssageReceived(IChatService svc, IChatMessage msg)
         {
-            _chatViewController.OnTextMessageReceived(svc, msg);
+            _chatViewController.OnTextMessageReceived(msg);
         }
 
         private void QueueOrSendOnJoinChannel(IChatService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);

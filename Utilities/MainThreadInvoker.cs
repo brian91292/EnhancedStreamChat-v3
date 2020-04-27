@@ -13,19 +13,17 @@ namespace EnhancedStreamChat.Utilities
     public class MainThreadInvoker
     {
         private static CancellationTokenSource _cancellationToken = new CancellationTokenSource();
-        private static TaskFactory _taskFactory = new TaskFactory(_cancellationToken.Token, TaskCreationOptions.None, TaskContinuationOptions.None, UnityMainThreadTaskScheduler.Default);
         public static void ClearQueue()
         {
             _cancellationToken.Cancel();
             _cancellationToken = new CancellationTokenSource();
-            _taskFactory = new TaskFactory(_cancellationToken.Token, TaskCreationOptions.None, TaskContinuationOptions.None, UnityMainThreadTaskScheduler.Default);
         }
 
         public static void Invoke(Action action)
         {
             if (action != null)
             {
-                _taskFactory.StartNew(action);
+                UnityMainThreadTaskScheduler.Factory.StartNew(action, _cancellationToken.Token);
             }
         }
 
@@ -33,7 +31,7 @@ namespace EnhancedStreamChat.Utilities
         {
             if (action != null)
             {
-                _taskFactory.StartNew(() => action?.Invoke(a));
+                UnityMainThreadTaskScheduler.Factory.StartNew(() => action?.Invoke(a), _cancellationToken.Token);
             }
         }
 
@@ -41,7 +39,7 @@ namespace EnhancedStreamChat.Utilities
         {
             if (action != null)
             {
-                _taskFactory.StartNew(() => action?.Invoke(a, b));
+                UnityMainThreadTaskScheduler.Factory.StartNew(() => action?.Invoke(a, b), _cancellationToken.Token);
             }
         }
     }
