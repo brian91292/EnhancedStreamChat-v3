@@ -143,14 +143,14 @@ namespace EnhancedStreamChat.Chat
                 Destroy(_chatMoverMaterial);
                 _chatMoverMaterial = null;
             }
-            if (_loadedAssets.Count > 0)
-            {
-                foreach (var asset in _loadedAssets.Values)
-                {
-                    asset.Unload(true);
-                }
-                _loadedAssets.Clear();
-            }
+            //if (_loadedAssets.Count > 0)
+            //{
+            //    foreach (var asset in _loadedAssets.Values)
+            //    {
+            //        asset.Unload(true);
+            //    }
+            //    _loadedAssets.Clear();
+            //}
         }
 
         [UIAction("#post-parse")]

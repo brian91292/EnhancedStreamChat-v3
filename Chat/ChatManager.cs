@@ -85,7 +85,7 @@ namespace EnhancedStreamChat.Chat
         {
             if (_chatViewController != null)
             {
-                Destroy(_chatViewController.gameObject);
+                DestroyImmediate(_chatViewController.gameObject);
                 _chatViewController = null;
                 MainThreadInvoker.ClearQueue();
             }
