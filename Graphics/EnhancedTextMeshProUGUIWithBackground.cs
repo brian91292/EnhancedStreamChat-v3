@@ -84,7 +84,7 @@ namespace EnhancedStreamChat.Graphics
             }
         }
 
-        public bool SubTextShown
+        public bool SubTextEnabled
         {
             get
             {
@@ -132,7 +132,7 @@ namespace EnhancedStreamChat.Graphics
             var backgroundFitter = gameObject.AddComponent<ContentSizeFitter>();
             backgroundFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            SubTextShown = false;
+            SubTextEnabled = false;
             HighlightEnabled = false;
             AccentEnabled = false;
             _accent.gameObject.transform.SetParent(gameObject.transform, false);

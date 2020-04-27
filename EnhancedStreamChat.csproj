@@ -18,6 +18,7 @@
     <ReferencePath>$(ProjectDir)Refs</ReferencePath>
     <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -53,8 +54,11 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(BeatSaberDir)\Plugins\BS_Utils.dll</HintPath>
     </Reference>
-    <Reference Include="StreamCore">
-      <HintPath>$(BeatSaberDir)\Libs\StreamCore.dll</HintPath>
+    <Reference Include="ChatCore">
+      <HintPath>$(BeatSaberDir)\Libs\ChatCore.dll</HintPath>
+    </Reference>
+    <Reference Include="SemVer">
+      <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Libs\SemVer.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\System.dll</HintPath>
@@ -152,6 +156,9 @@
       <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\UnityEngine.VRModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="VRUI">
+      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\VRUI.dll</HintPath>
+    </Reference>
     <Reference Include="Zenject, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\Zenject.dll</HintPath>
@@ -171,8 +178,11 @@
     <Compile Include="Graphics\EnhancedImageInfo.cs" />
     <Compile Include="Graphics\EnhancedTextMeshProUGUI.cs" />
     <Compile Include="Chat\ChatMessageBuilder.cs" />
+    <Compile Include="Graphics\EnhancedFontInfo.cs" />
     <Compile Include="Graphics\LockBitmap.cs" />
     <Compile Include="Utilities\BeatSaberUtils.cs" />
+    <Compile Include="Utilities\ColorUtils.cs" />
+    <Compile Include="Utilities\FixedSizeQueue.cs" />
     <Compile Include="Utilities\GraphicUtils.cs" />
     <Compile Include="Utilities\MainThreadInvoker.cs" />
     <Compile Include="Utilities\MathUtils.cs" />
@@ -185,10 +195,15 @@
     <EmbeddedResource Include="manifest.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="BuildTargets.targets" />
     <None Include=".gitignore" />
     <EmbeddedResource Include="Chat\ChatViewController.bsml" />
-    <EmbeddedResource Include="Resources\Fonts\NotoSans-Regular" />
+    <None Include="Resources\Fonts\hk" />
+    <None Include="Resources\Fonts\jp" />
+    <None Include="Resources\Fonts\kr" />
+    <EmbeddedResource Include="Resources\Fonts\main" />
+    <None Include="Resources\Fonts\sc" />
+    <EmbeddedResource Include="Resources\Fonts\symbols" />
+    <None Include="Resources\Fonts\tc" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Twitch\" />
@@ -196,8 +211,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\Settings.png" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\PizzaDog.jpg" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="BuildTargets.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy /Y "$(TargetDir)$(TargetFileName)" "$(BeatSaberDir)\Plugins"</PostBuildEvent>
   </PropertyGroup>

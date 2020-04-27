@@ -11,7 +11,7 @@ namespace EnhancedStreamChat.Utilities
     /// A dynamic pool of unity components of type T, that recycles old objects when possible, and allocates new objects when required.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class ObjectPool<T> where T : Component
+    public class ObjectPool<T> : IDisposable where T : Component
     {
         private Queue<T> _freeObjects;
         private Action<T> FirstAlloc;
@@ -27,7 +27,7 @@ namespace EnhancedStreamChat.Utilities
         /// <param name="FirstAlloc">The callback function you want to occur only the first time when a new component of type T is allocated.</param>
         /// <param name="OnAlloc">The callback function to be called everytime ObjectPool.Alloc() is called.</param>
         /// <param name="OnFree">The callback function to be called everytime ObjectPool.Free() is called</param>
-        public ObjectPool(int initialCount = 0, Func<T> Constructor = null, Action < T> FirstAlloc = null, Action<T> OnAlloc = null, Action<T> OnFree = null)
+        public ObjectPool(int initialCount = 0, Func<T> Constructor = null, Action<T> FirstAlloc = null, Action<T> OnAlloc = null, Action<T> OnFree = null)
         {
             this.Constructor = Constructor;
             this.FirstAlloc = FirstAlloc;
@@ -43,8 +43,28 @@ namespace EnhancedStreamChat.Utilities
 
         ~ObjectPool()
         {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            Dispose(false);
+        }
+
+        public void Dispose(bool immediate)
+        {
             foreach (T obj in _freeObjects)
-                UnityEngine.Object.Destroy(obj.gameObject);
+            {
+                if (immediate)
+                {
+                    UnityEngine.Object.DestroyImmediate(obj.gameObject);
+                }
+                else
+                {
+                    UnityEngine.Object.Destroy(obj.gameObject);
+                }
+            }
+            _freeObjects.Clear();
         }
 
         private T internalAlloc()

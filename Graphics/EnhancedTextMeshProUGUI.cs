@@ -1,7 +1,7 @@
 ﻿using BeatSaberMarkupLanguage;
 using BeatSaberMarkupLanguage.Animations;
 using EnhancedStreamChat.Utilities;
-using StreamCore.Interfaces;
+using ChatCore.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,17 +13,16 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TextCore;
 using UnityEngine.UI;
+using IPA.Utilities.Async;
 
 namespace EnhancedStreamChat.Graphics
 {
     public class EnhancedTextMeshProUGUI : TextMeshProUGUI
     {
         public IChatMessage ChatMessage { get; set; } = null;
+        public EnhancedFontInfo FontInfo { get; set; } = null;
         private static object _lock = new object();
-
         public event Action OnLatePreRenderRebuildComplete;
-
-        private static Dictionary<TMP_FontAsset, Dictionary<char, EnhancedImageInfo>> _fontLookupTable { get; } = new Dictionary<TMP_FontAsset, Dictionary<char, EnhancedImageInfo>>();
 
         private static ObjectPool<EnhancedImage> _imagePool = new ObjectPool<EnhancedImage>(
             Constructor: () =>
@@ -55,67 +54,6 @@ namespace EnhancedStreamChat.Graphics
             }
         );
 
-        public static bool TryGetImageInfo(TMP_FontAsset font, char c, out EnhancedImageInfo imageInfo)
-        {
-            lock (_lock)
-            {
-                if (!_fontLookupTable.TryGetValue(font, out var fontLookupTable))
-                {
-                    imageInfo = null;
-                    return false;
-                }
-                return fontLookupTable.TryGetValue(c, out imageInfo);
-            }
-        }
-
-        public static bool TryRegisterImageInfo(TMP_FontAsset font, char c, EnhancedImageInfo imageInfo)
-        {
-            lock (_lock)
-            {
-                if (imageInfo == null)
-                {
-                    return false;
-                }
-                if (!_fontLookupTable.TryGetValue(font, out var fontLookupTable))
-                {
-                    fontLookupTable = new Dictionary<char, EnhancedImageInfo>();
-                    _fontLookupTable.Add(font, fontLookupTable);
-                }
-                if (!fontLookupTable.ContainsKey(c))
-                {
-                    if (font.characterLookupTable.ContainsKey(c))
-                    {
-                        // Can't register an image for a character that already has something assigned to it
-                        return false;
-                    }
-                    font.characterLookupTable.Add(c, new TMP_Character(c, new Glyph(c, new UnityEngine.TextCore.GlyphMetrics(imageInfo.Width, imageInfo.Height, 0, 0, imageInfo.Width), new UnityEngine.TextCore.GlyphRect(0, 0, 0, 0))));
-                    fontLookupTable.Add(c, imageInfo);
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        public static bool TryUnregisterImageInfo(TMP_FontAsset font, char c)
-        {
-            lock (_lock)
-            {
-                if (!_fontLookupTable.TryGetValue(font, out var fontLookupTable))
-                {
-                    return false;
-                }
-                if (!fontLookupTable.ContainsKey(c))
-                {
-                    return false;
-                }
-                if (font.characterLookupTable.ContainsKey(c))
-                {
-                    font.characterLookupTable.Remove(c);
-                }
-                return fontLookupTable.Remove(c);
-            }
-        }
-
         public void ClearImages()
         {
             foreach (var enhancedImage in _currentImages)
@@ -141,18 +79,27 @@ namespace EnhancedStreamChat.Graphics
                             // Skip invisible/empty/out of range chars
                             continue;
                         }
-                        if (!_fontLookupTable.TryGetValue(font, out var imageLookupTable) || !imageLookupTable.TryGetValue(text[c.index], out var imageInfo) || imageInfo is null)
+
+                        uint character = text[c.index];
+                        if(c.index + 1 < text.Length && char.IsSurrogatePair(text[c.index], text[c.index + 1]))
                         {
-                            // Skip unregistered fonts and characters that have no imageInfo registered
+                            // If it's a surrogate pair, convert the character
+                            character = (uint)char.ConvertToUtf32(text[c.index], text[c.index + 1]);
+                        }
+
+                        if (FontInfo == null || !FontInfo.TryGetImageInfo(character, out var imageInfo) || imageInfo is null)
+                        {
+                            // Skip characters that have no imageInfo registered
                             continue;
                         }
+
                         var img = _imagePool.Alloc();
                         try
                         {
                             if (imageInfo.AnimControllerData != null)
                             {
                                 img.animStateUpdater.controllerData = imageInfo.AnimControllerData;
-                                img.sprite = imageInfo.AnimControllerData.sprites[0];
+                                img.sprite = imageInfo.AnimControllerData.sprites[imageInfo.AnimControllerData.uvIndex];
                             }
                             else
                             {

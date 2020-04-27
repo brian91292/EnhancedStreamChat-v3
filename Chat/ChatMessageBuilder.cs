@@ -1,8 +1,8 @@
 ﻿using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
-using StreamCore.Interfaces;
-using StreamCore.Models;
-using StreamCore.Models.Twitch;
+using ChatCore.Interfaces;
+using ChatCore.Models;
+using ChatCore.Models.Twitch;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,7 +20,7 @@ namespace EnhancedStreamChat.Chat
         /// </summary>
         /// <param name="msg">The chat message to get images from</param>
         /// <param name="font">The font to register these images to</param>
-        public static bool PrepareImages(IChatMessage msg, TMP_FontAsset font)
+        public static bool PrepareImages(IChatMessage msg, EnhancedFontInfo font)
         {
             List<Task<EnhancedImageInfo>> tasks = new List<Task<EnhancedImageInfo>>();
             HashSet<string> pendingEmoteDownloads = new HashSet<string>();
@@ -39,9 +39,9 @@ namespace EnhancedStreamChat.Chat
                     {
                         if (info != null)
                         {
-                            if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            if(!font.TryRegisterImageInfo(info, out var character))
                             {
-                                Logger.log.Info($"Failed to register {emote.Id} in font {font.name}");
+                                Logger.log.Warn($"Failed to register emote \"{emote.Id}\" in font {font.Font.name}.");
                             }
                         }
                         tcs.SetResult(info);
@@ -64,9 +64,9 @@ namespace EnhancedStreamChat.Chat
                     {
                         if (info != null)
                         {
-                            if (!EnhancedTextMeshProUGUI.TryRegisterImageInfo(font, info.Character, info))
+                            if (!font.TryRegisterImageInfo(info, out var character))
                             {
-                                Logger.log.Info($"Failed to register {badge.Id} in font {font.name}");
+                                Logger.log.Warn($"Failed to register badge \"{badge.Id}\" in font {font.Font.name}.");
                             }
                         }
                         tcs.SetResult(info);
@@ -76,17 +76,18 @@ namespace EnhancedStreamChat.Chat
             }
 
             // Wait on all the resources to be ready
-            return Task.WaitAll(tasks.ToArray(), 30000);
-        } 
+            return Task.WaitAll(tasks.ToArray(), 15000);
+        }
 
-        public static async Task<string> BuildMessage(IChatMessage msg, TMP_FontAsset font)
+
+        public static async Task<string> BuildMessage(IChatMessage msg, EnhancedFontInfo font)
         {
             try
             {
                 if(!PrepareImages(msg, font))
                 {
-                    Logger.log.Warn($"Failed to prepare images for msg \"{msg.Message}\"!");
-                    return msg.Message;
+                    Logger.log.Warn($"Failed to prepare some/all images for msg \"{msg.Message}\"!");
+                    //return msg.Message;
                 }
 
                 ConcurrentStack<EnhancedImageInfo> badges = new ConcurrentStack<EnhancedImageInfo>();
@@ -95,6 +96,7 @@ namespace EnhancedStreamChat.Chat
                     if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(badge.Id, out var badgeInfo))
                     {
                         Logger.log.Warn($"Failed to find cached image info for badge \"{badge.Id}\"!");
+                        continue;
                     }
                     badges.Push(badgeInfo);
                 }
@@ -102,21 +104,25 @@ namespace EnhancedStreamChat.Chat
                 StringBuilder sb = new StringBuilder(msg.Message);
                 foreach (var emote in msg.Emotes)
                 {
-                    if (ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
+                    if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
                     {
-                        //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
-                        string replaceStr = char.ConvertFromUtf32(replace.Character);
-                        if(emote is TwitchEmote twitch && twitch.Bits > 0)
-                        {
-                            replaceStr = $"{replaceStr} </noparse><color={twitch.Color}><size=60%><b>{twitch.Bits}</b></size></color><noparse>";
-                        }
-                        // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
-                        sb.Replace(emote.Name, replaceStr, emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                        Logger.log.Warn($"Emote {emote.Name} was missing from the emote dict! The request to {emote.Uri} may have timed out?");
+                        continue;
                     }
-                    else
+                    //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
+                    if(!font.TryGetCharacter(replace.ImageId, out uint character))
                     {
-                        Logger.log.Warn($"Emote {emote.Name} was missing from the emote dict! The request may have timed out?");
+                        Logger.log.Warn($"Emote {emote.Name} was missing from the character dict! Font hay have run out of usable characters.");
+                        continue;
                     }
+
+                    // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
+                    sb.Replace(emote.Name, emote switch
+                    {
+                        TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0</noparse><color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color><noparse>",
+                        _ => char.ConvertFromUtf32((int)character)
+                    }, 
+                    emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
                 }
 
                 if (msg.IsSystemMessage)
@@ -146,9 +152,9 @@ namespace EnhancedStreamChat.Chat
                     for (int i = 0; i < msg.Sender.Badges.Length; i++)
                     {
                         // Insert user badges at the beginning of the string in reverse order
-                        if (badges.TryPop(out var badge))
+                        if (badges.TryPop(out var badge) && font.TryGetCharacter(badge.ImageId, out var character))
                         {
-                            sb.Insert(0, $"{badge.Character} ");
+                            sb.Insert(0, $"{char.ConvertFromUtf32((int)character)} ");
                         }
                     }
                 }

@@ -1,8 +1,10 @@
 ﻿using BS_Utils.Utilities;
 using EnhancedStreamChat.Utilities;
-using StreamCore;
-using StreamCore.Interfaces;
-using StreamCore.Services.Twitch;
+using ChatCore;
+using ChatCore.Interfaces;
+using ChatCore.Logging;
+using ChatCore.Services;
+using ChatCore.Services.Twitch;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -17,32 +19,77 @@ namespace EnhancedStreamChat.Chat
 {
     public class ChatManager : PersistentSingleton<ChatManager>
     {
-        StreamCoreInstance _sc;
-        void Start()
+        internal ChatCoreInstance _sc;
+        internal ChatServiceMultiplexer _svcs;
+        void Awake()
         {
             DontDestroyOnLoad(gameObject);
-            _sc = StreamCoreInstance.Create();
-            var svcs = _sc.RunAllServices();
-            svcs.OnJoinChannel += (svc, channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
-            svcs.OnTextMessageReceived += (svc, msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
-            svcs.OnChatCleared += (svc, uid) => QueueOrSendMessage(svc, uid, OnClearChat);
-            svcs.OnMessageCleared += (svc, mid) => QueueOrSendMessage(svc, mid, OnClearMessage);
-            MainThreadInvoker.TouchInstance();
+        }
+
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            _sc = ChatCoreInstance.Create();
+            //_sc.OnLogReceived += _sc_OnLogReceived;
+            _svcs = _sc.RunAllServices();
+            _svcs.OnJoinChannel += QueueOrSendOnJoinChannel;
+            _svcs.OnTextMessageReceived += QueueOrSendOnTextMessageReceived;
+            _svcs.OnChatCleared += QueueOrSendOnClearChat;
+            _svcs.OnMessageCleared += QueueOrSendOnClearMessage;
             ChatImageProvider.TouchInstance();
             Task.Run(HandleOverflowMessageQueue);
             BSEvents.menuSceneLoadedFresh += BSEvents_menuSceneLoadedFresh;
         }
 
-        ChatViewController _chatViewController;
-        private IEnumerator PresentChat()
+        private void _sc_OnLogReceived(CustomLogLevel level, string category, string log)
         {
-            yield return new WaitForSeconds(1);
-            _chatViewController = BeatSaberMarkupLanguage.BeatSaberUI.CreateViewController<ChatViewController>();
+            var newLevel = level switch
+            {
+                CustomLogLevel.Critical => IPA.Logging.Logger.Level.Critical,
+                CustomLogLevel.Debug => IPA.Logging.Logger.Level.Debug,
+                CustomLogLevel.Error => IPA.Logging.Logger.Level.Error,
+                CustomLogLevel.Information => IPA.Logging.Logger.Level.Info,
+                CustomLogLevel.Trace => IPA.Logging.Logger.Level.Trace,
+                CustomLogLevel.Warning => IPA.Logging.Logger.Level.Warning,
+                _ => IPA.Logging.Logger.Level.None
+            };
+            Logger.cclog.Log(newLevel, log);
         }
 
+        public void OnDisable()
+        {
+            if(_svcs != null)
+            {
+                _svcs.OnJoinChannel -= QueueOrSendOnJoinChannel;
+                _svcs.OnTextMessageReceived -= QueueOrSendOnTextMessageReceived;
+                _svcs.OnChatCleared -= QueueOrSendOnClearChat;
+                _svcs.OnMessageCleared -= QueueOrSendOnClearMessage;
+                BSEvents.menuSceneLoadedFresh -= BSEvents_menuSceneLoadedFresh;
+            }
+            if (_sc != null)
+            {
+                //_sc.OnLogReceived -= _sc_OnLogReceived;
+                _sc.StopAllServices();
+            }
+            if(_chatViewController != null)
+            {
+                Destroy(_chatViewController.gameObject);
+                _chatViewController = null;
+            }
+            MainThreadInvoker.ClearQueue();
+            ChatImageProvider.ClearCache();
+        }
+
+        ChatViewController _chatViewController;
         private void BSEvents_menuSceneLoadedFresh()
         {
-            StartCoroutine(PresentChat());
+            if (_chatViewController != null)
+            {
+                Destroy(_chatViewController.gameObject);
+                _chatViewController = null;
+                MainThreadInvoker.ClearQueue();
+            }
+            _chatViewController = BeatSaberMarkupLanguage.BeatSaberUI.CreateViewController<ChatViewController>();
         }
 
         private ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
@@ -87,7 +134,7 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void QueueOrSendMessage<T>(IStreamingService svc, T data, Action<IStreamingService, T> action)
+        private void QueueOrSendMessage<T>(IChatService svc, T data, Action<IChatService, T> action)
         {
             if (_chatViewController == null || !_msgLock.Wait(50))
             {
@@ -100,22 +147,26 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void OnTextMesssageReceived(IStreamingService svc, IChatMessage msg)
+        private void QueueOrSendOnTextMessageReceived(IChatService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
+        private void OnTextMesssageReceived(IChatService svc, IChatMessage msg)
         {
             _chatViewController.OnTextMessageReceived(svc, msg);
         }
 
-        private void OnJoinChannel(IStreamingService svc, IChatChannel channel)
+        private void QueueOrSendOnJoinChannel(IChatService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
+        private void OnJoinChannel(IChatService svc, IChatChannel channel)
         {
             _chatViewController.OnJoinChannel(svc, channel);
         }
 
-        private void OnClearMessage(IStreamingService svc, string messageId)
+        private void QueueOrSendOnClearMessage(IChatService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
+        private void OnClearMessage(IChatService svc, string messageId)
         {
             _chatViewController.OnMessageCleared(messageId);
         }
 
-        private void OnClearChat(IStreamingService svc, string userId)
+        private void QueueOrSendOnClearChat(IChatService svc, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
+        private void OnClearChat(IChatService svc, string userId)
         {
             _chatViewController.OnChatCleared(userId);
         }

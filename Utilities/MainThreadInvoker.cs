@@ -1,39 +1,31 @@
-﻿using System;
+﻿using IPA.Utilities.Async;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
 namespace EnhancedStreamChat.Utilities
 {
-    public class MainThreadInvoker : PersistentSingleton<MainThreadInvoker>
+    public class MainThreadInvoker
     {
-        //public static int MAX_INVOKES_PER_FRAME = 10;
-        private static ConcurrentQueue<Action> _actions = new ConcurrentQueue<Action>();
-        private void Update()
+        private static CancellationTokenSource _cancellationToken = new CancellationTokenSource();
+        private static TaskFactory _taskFactory = new TaskFactory(_cancellationToken.Token, TaskCreationOptions.None, TaskContinuationOptions.None, UnityMainThreadTaskScheduler.Default);
+        public static void ClearQueue()
         {
-            //int count = 0;
-            //while(count++ < MAX_INVOKES_PER_FRAME && _actions.TryDequeue(out var action))
-            if(_actions.TryDequeue(out var action))
-            {
-                try
-                {
-                    action?.Invoke();
-                }
-                catch(Exception ex)
-                {
-                    Logger.log.Error(ex);
-                }
-            }
+            _cancellationToken.Cancel();
+            _cancellationToken = new CancellationTokenSource();
+            _taskFactory = new TaskFactory(_cancellationToken.Token, TaskCreationOptions.None, TaskContinuationOptions.None, UnityMainThreadTaskScheduler.Default);
         }
 
         public static void Invoke(Action action)
         {
             if (action != null)
             {
-                _actions.Enqueue(action);
+                _taskFactory.StartNew(action);
             }
         }
 
@@ -41,7 +33,7 @@ namespace EnhancedStreamChat.Utilities
         {
             if (action != null)
             {
-                _actions.Enqueue(() => action?.Invoke(a));
+                _taskFactory.StartNew(() => action?.Invoke(a));
             }
         }
 
@@ -49,7 +41,7 @@ namespace EnhancedStreamChat.Utilities
         {
             if (action != null)
             {
-                _actions.Enqueue(() => action?.Invoke(a, b));
+                _taskFactory.StartNew(() => action?.Invoke(a, b));
             }
         }
     }

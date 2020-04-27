@@ -3,6 +3,7 @@ using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -15,9 +16,10 @@ namespace EnhancedStreamChat.Chat
 {
     public class ChatImageProvider : PersistentSingleton<ChatImageProvider>
     {
-        private Dictionary<string, EnhancedImageInfo> _cachedImageInfo = new Dictionary<string, EnhancedImageInfo>();
+        private ConcurrentDictionary<string, EnhancedImageInfo> _cachedImageInfo = new ConcurrentDictionary<string, EnhancedImageInfo>();
         public ReadOnlyDictionary<string, EnhancedImageInfo> CachedImageInfo { get; internal set; }
-        private char _replaceChar = '\uE000';
+       
+
         private void Awake()
         {
             CachedImageInfo = new ReadOnlyDictionary<string, EnhancedImageInfo>(_cachedImageInfo);
@@ -71,7 +73,7 @@ namespace EnhancedStreamChat.Chat
                                 spriteHeight = height;
                             }
                         );
-                        yield return new WaitUntil(() => sprite != null);
+                        yield return new WaitUntil(() => animControllerData != null);
                     }
                     else
                     {
@@ -102,17 +104,30 @@ namespace EnhancedStreamChat.Chat
                     sprite.texture.wrapMode = TextureWrapMode.Clamp;
                     imageInfo = new EnhancedImageInfo()
                     {
+                        ImageId = id,
                         Sprite = sprite,
                         Width = spriteWidth,
                         Height = spriteHeight,
-                        Character = _replaceChar++,
                         AnimControllerData = animControllerData
                     };
-                    //Logger.log.Info($"Caching image info for {id}. {(_replaceChar - '\uE000')} images have been cached.");
-                    _cachedImageInfo.Add(id, imageInfo);
+                    //Logger.log.Info($"Caching image info for {id}. {_cachedImageInfo.Count} images have been cached.");
+                    _cachedImageInfo.TryAdd(id, imageInfo);
                 }
             }
             OnDownloadComplete?.Invoke(imageInfo);
+        }
+
+
+        internal static void ClearCache()
+        {
+            if (instance._cachedImageInfo.Count > 0)
+            {
+                foreach (var info in instance._cachedImageInfo.Values)
+                {
+                    Destroy(info.Sprite);
+                }
+                instance._cachedImageInfo.Clear();
+            }
         }
     }
 }
