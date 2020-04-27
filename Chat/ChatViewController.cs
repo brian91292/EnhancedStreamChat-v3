@@ -26,6 +26,7 @@ using BS_Utils.Utilities;
 using BeatSaberMarkupLanguage.Components.Settings;
 using BeatSaberMarkupLanguage.Parser;
 using VRUIControls;
+using System.Diagnostics;
 
 namespace EnhancedStreamChat.Chat
 {
@@ -66,6 +67,10 @@ namespace EnhancedStreamChat.Chat
                     OnAlloc: (msg) =>
                     {
                         msg.gameObject.transform.SetParent(_chatContainer.transform, false);
+                        if(ReverseChatOrder)
+                        {
+                            msg.gameObject.transform.SetAsFirstSibling();
+                        }
                     },
                     OnFree: (msg) =>
                     {
@@ -167,8 +172,293 @@ namespace EnhancedStreamChat.Chat
             _pingColorSetting.editButton.onClick.AddListener(HideSettings);
             _pingColorSetting.modalColorPicker.cancelEvent += ShowSettings;
             _pingColorSetting.CurrentColor = _chatConfig.PingColor.ToColor();
+            // text
+            _textColorSetting.editButton.onClick.AddListener(HideSettings);
+            _textColorSetting.modalColorPicker.cancelEvent += ShowSettings;
+            _textColorSetting.CurrentColor = _chatConfig.TextColor.ToColor();
 
             _chatContainer.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        [UIParams]
+        internal BSMLParserParams parserParams;
+
+        [UIComponent("background-color-setting")]
+        ColorSetting _backgroundColorSetting;
+
+        [UIComponent("accent-color-setting")]
+        ColorSetting _accentColorSetting;
+
+        [UIComponent("highlight-color-setting")]
+        ColorSetting _highlightColorSetting;
+
+        [UIComponent("ping-color-setting")]
+        ColorSetting _pingColorSetting;
+
+        [UIComponent("text-color-setting")]
+        ColorSetting _textColorSetting;
+
+        [UIObject("ChatContainer")]
+        GameObject _chatContainer;
+
+        private Color _accentColor;
+        [UIValue("accent-color")]
+        public Color AccentColor
+        {
+            get => _accentColor;
+            set
+            {
+                _accentColor = value;
+                _chatConfig.AccentColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _highlightColor;
+        [UIValue("highlight-color")]
+        public Color HighlightColor
+        {
+            get => _highlightColor;
+            set
+            {
+                _highlightColor = value;
+                _chatConfig.HighlightColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _pingColor;
+        [UIValue("ping-color")]
+        public Color PingColor
+        {
+            get => _pingColor;
+            set
+            {
+                _pingColor = value;
+                _chatConfig.PingColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _backgroundColor;
+        [UIValue("background-color")]
+        public Color BackgroundColor
+        {
+            get => _backgroundColor;
+            set
+            {
+                _backgroundColor = value;
+                _chatConfig.BackgroundColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                _chatScreen.gameObject.GetComponent<Image>().material.color = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        private Color _textColor;
+        [UIValue("text-color")]
+        public Color TextColor
+        {
+            get => _textColor;
+            set
+            {
+                _textColor = value;
+                _chatConfig.TextColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("font-size")]
+        public float FontSize
+        {
+            get => _chatConfig.FontSize;
+            set
+            {
+                _chatConfig.FontSize = value;
+                UpdateChatMessages();
+                NotifyPropertyChanged();
+            }
+        }
+
+        private int _settingsWidth = 110;
+        [UIValue("settings-width")]
+        public int SettingsWidth
+        {
+            get => _settingsWidth;
+            set
+            {
+                _settingsWidth = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("chat-width")]
+        public int ChatWidth
+        {
+            get => _chatConfig.ChatWidth;
+            set
+            {
+                _chatConfig.ChatWidth = value;
+                _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("chat-height")]
+        public int ChatHeight
+        {
+            get => _chatConfig.ChatHeight;
+            set
+            {
+                _chatConfig.ChatHeight = value;
+                _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("chat-position")]
+        public Vector3 ChatPosition
+        {
+            get => _isInGame ? _chatConfig.Song_ChatPosition : _chatConfig.Menu_ChatPosition;
+            set
+            {
+                if (_isInGame)
+                {
+                    _chatConfig.Song_ChatPosition = value;
+                }
+                else
+                {
+                    _chatConfig.Menu_ChatPosition = value;
+                }
+                _chatScreen.ScreenPosition = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("chat-rotation")]
+        public Vector3 ChatRotation
+        {
+            get => _isInGame ? _chatConfig.Song_ChatRotation : _chatConfig.Menu_ChatRotation;
+            set
+            {
+                if (_isInGame)
+                {
+                    _chatConfig.Song_ChatRotation = value;
+                }
+                else
+                {
+                    _chatConfig.Menu_ChatRotation = value;
+                }
+                _chatScreen.ScreenRotation = Quaternion.Euler(value);
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("allow-movement")]
+        public bool AllowMovement
+        {
+            get => _chatConfig.AllowMovement;
+            set
+            {
+                _chatConfig.AllowMovement = value;
+                _chatScreen.ShowHandle = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("chat-anchor-min-y")] 
+        public float ChatAnchorMinY
+        {
+            get => 0.022f;
+        }
+        [UIValue("chat-anchor-max-y")] 
+        public float ChatAnchorMaxY
+        {
+            get => 0.978f;
+        }
+        [UIValue("chat-pivot-pos-y")]
+        public float ChatPivotPosY
+        {
+            get => ReverseChatOrder ? 1.0f : 0.0f;
+        }
+        [UIValue("chat-anchor-pos-y")]
+        public float ChatAnchorPosY
+        {
+            get => ReverseChatOrder ? ChatAnchorMaxY : ChatAnchorMinY;
+        }
+        [UIValue("reverse-chat-order")]
+        public bool ReverseChatOrder
+        {
+            get => _chatConfig.ReverseChatOrder;
+            set
+            {
+                if(_chatConfig.ReverseChatOrder != value)
+                {
+                    // Reverse the order of any messages that are currently in chat
+                    var array = _chatContainer.GetComponentsInChildren<EnhancedTextMeshProUGUIWithBackground>().Reverse().ToArray();
+                    for (int i = 0; i < array.Length; i++)
+                    {
+                        array[i].gameObject.transform.SetSiblingIndex(i);   
+                    }
+                    _chatConfig.ReverseChatOrder = value;
+                }
+                NotifyPropertyChanged(nameof(ChatPivotPosY));
+                NotifyPropertyChanged(nameof(ChatAnchorPosY));
+                NotifyPropertyChanged(nameof(ChatAnchorMinY));
+                NotifyPropertyChanged(nameof(ChatAnchorMaxY));
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("mod-version")]
+
+        public string ModVersion
+        {
+            get => Plugin.Version;
+        }
+
+        [UIAction("launch-web-app")]
+        private void LaunchWebApp()
+        {
+            ChatManager.instance._sc.LaunchWebApp();
+        }
+
+        [UIAction("launch-kofi")]
+        private void LaunchKofi()
+        {
+            Process.Start("https://ko-fi.com/brian91292");
+        }
+
+        [UIAction("launch-github")]
+        private void LaunchGitHub()
+        {
+            Process.Start("https://github.com/brian91292/EnhancedStreamChat-v3");
+        }
+
+        [UIAction("on-settings-clicked")]
+        private void OnSettingsClick()
+        {
+            Logger.log.Info("Settings clicked!");
+        }
+
+        [UIAction("#hide-settings")]
+        private void OnHideSettings()
+        {
+            Logger.log.Info("Saving settings!");
+            _chatConfig.Save();
+        }
+
+        private void HideSettings()
+        {
+            parserParams.EmitEvent("hide-settings");
+        }
+
+        private void ShowSettings()
+        {
+            parserParams.EmitEvent("show-settings");
         }
 
         private void BSEvents_gameSceneActive()
@@ -278,6 +568,8 @@ namespace EnhancedStreamChat.Chat
             HighlightColor = _chatConfig.HighlightColor.ToColor();
             BackgroundColor = _chatConfig.BackgroundColor.ToColor();
             PingColor = _chatConfig.PingColor.ToColor();
+            TextColor = _chatConfig.TextColor.ToColor();
+            ReverseChatOrder = _chatConfig.ReverseChatOrder;
             if (_isInGame)
             {
                 ChatPosition = _chatConfig.Song_ChatPosition;
@@ -309,14 +601,14 @@ namespace EnhancedStreamChat.Chat
             msg.Text.overflowMode = TextOverflowModes.Overflow;
             msg.Text.alignment = TextAlignmentOptions.BottomLeft;
             msg.Text.lineSpacing = 1.5f;
-            msg.Text.color = Color.white;
+            msg.Text.color = TextColor;
             msg.Text.fontSize = _chatConfig.FontSize;
             msg.Text.lineSpacing = 1.5f;
 
             msg.SubText.font = _chatFont.Font;
             msg.SubText.overflowMode = TextOverflowModes.Overflow;
             msg.SubText.alignment = TextAlignmentOptions.BottomLeft;
-            msg.SubText.color = Color.white;
+            msg.SubText.color = TextColor;
             msg.SubText.fontSize = _chatConfig.FontSize;
             msg.SubText.lineSpacing = 1.5f;
 
@@ -434,201 +726,6 @@ namespace EnhancedStreamChat.Chat
                 UpdateChatMessage(_lastMessage);
                 CleanupOldMessages();
             });
-        }
-
-        [UIParams]
-        internal BSMLParserParams parserParams;
-
-        [UIComponent("background-color-setting")]
-        ColorSetting _backgroundColorSetting;
-
-        [UIComponent("accent-color-setting")]
-        ColorSetting _accentColorSetting;
-
-        [UIComponent("highlight-color-setting")]
-        ColorSetting _highlightColorSetting;
-
-        [UIComponent("ping-color-setting")]
-        ColorSetting _pingColorSetting;
-
-        [UIObject("ChatContainer")]
-        GameObject _chatContainer;
-
-        private Color _accentColor;
-        [UIValue("accent-color")]
-        public Color AccentColor
-        {
-            get => _accentColor;
-            set
-            {
-                _accentColor = value;
-                _chatConfig.AccentColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
-                UpdateChatMessages();
-                NotifyPropertyChanged();
-            }
-        }
-
-        private Color _highlightColor;
-        [UIValue("highlight-color")]
-        public Color HighlightColor
-        {
-            get => _highlightColor;
-            set
-            {
-                _highlightColor = value;
-                _chatConfig.HighlightColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
-                UpdateChatMessages();
-                NotifyPropertyChanged();
-            }
-        }
-
-        private Color _pingColor;
-        [UIValue("ping-color")]
-        public Color PingColor
-        {
-            get => _pingColor;
-            set
-            {
-                _pingColor = value;
-                _chatConfig.PingColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
-                UpdateChatMessages();
-                NotifyPropertyChanged();
-            }
-        }
-
-        private Color _backgroundColor;
-        [UIValue("background-color")]
-        public Color BackgroundColor
-        {
-            get => _backgroundColor;
-            set
-            {
-                _backgroundColor = value;
-                _chatConfig.BackgroundColor = "#" + ColorUtility.ToHtmlStringRGBA(value);
-                _chatScreen.gameObject.GetComponent<Image>().material.color = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIValue("font-size")]
-        public float FontSize
-        {
-            get => _chatConfig.FontSize;
-            set
-            {
-                _chatConfig.FontSize = value;
-                UpdateChatMessages();
-                NotifyPropertyChanged();
-            }
-        }
-
-        private int _settingsWidth = 110;
-        [UIValue("settings-width")]
-        public int SettingsWidth
-        {
-            get => _settingsWidth;
-            set
-            {
-                _settingsWidth = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIValue("chat-width")]
-        public int ChatWidth
-        {
-            get => _chatConfig.ChatWidth;
-            set
-            {
-                _chatConfig.ChatWidth = value;
-                _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIValue("chat-height")]
-        public int ChatHeight
-        {
-            get => _chatConfig.ChatHeight;
-            set
-            {
-                _chatConfig.ChatHeight = value;
-                _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIValue("chat-position")]
-        public Vector3 ChatPosition
-        {
-            get => _isInGame ? _chatConfig.Song_ChatPosition : _chatConfig.Menu_ChatPosition;
-            set
-            {
-                if (_isInGame)
-                {
-                    _chatConfig.Song_ChatPosition = value;
-                }
-                else
-                {
-                    _chatConfig.Menu_ChatPosition = value;
-                }
-                _chatScreen.ScreenPosition = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIValue("chat-rotation")]
-        public Vector3 ChatRotation
-        {
-            get => _isInGame ? _chatConfig.Song_ChatRotation : _chatConfig.Menu_ChatRotation;
-            set
-            {
-                if (_isInGame)
-                {
-                    _chatConfig.Song_ChatRotation = value;
-                }
-                else
-                {
-                    _chatConfig.Menu_ChatRotation = value;
-                }
-                _chatScreen.ScreenRotation = Quaternion.Euler(value);
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIValue("allow-movement")]
-        public bool AllowMovement
-        {
-            get => _chatConfig.AllowMovement;
-            set
-            {
-                _chatConfig.AllowMovement = value;
-                _chatScreen.ShowHandle = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        [UIAction("on-settings-clicked")]
-        private void OnSettingsClick()
-        {
-            Logger.log.Info("Settings clicked!");
-        }
-
-        [UIAction("#hide-settings")]
-        private void OnHideSettings()
-        {
-            Logger.log.Info("Saving settings!");
-            _chatConfig.Save();
-        }
-
-        private void HideSettings()
-        {
-            parserParams.EmitEvent("hide-settings");
-        }
-
-        private void ShowSettings()
-        {
-            parserParams.EmitEvent("show-settings");
         }
 
         private static Dictionary<string, AssetBundle> _loadedAssets = new Dictionary<string, AssetBundle>();

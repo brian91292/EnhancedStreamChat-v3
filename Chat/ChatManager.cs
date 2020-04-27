@@ -19,8 +19,8 @@ namespace EnhancedStreamChat.Chat
 {
     public class ChatManager : PersistentSingleton<ChatManager>
     {
-        ChatCoreInstance _sc;
-        ChatServiceMultiplexer _svcs;
+        internal ChatCoreInstance _sc;
+        internal ChatServiceMultiplexer _svcs;
         void Awake()
         {
             DontDestroyOnLoad(gameObject);

@@ -42,6 +42,8 @@ namespace EnhancedStreamChat.Chat
         [ConfigSection("Colors")]
         [ConfigMeta(Comment = "The background color of the chat")]
         public string BackgroundColor = "#0000007F";
+        [ConfigMeta(Comment = "The base color of the chat text.")]
+        public string TextColor = "#FFFFFFFF";
         [ConfigMeta(Comment = "The accent color to be used on system messages")]
         public string AccentColor = "#9147FFFF";
         [ConfigMeta(Comment = "The highlight color to be used on system messages")]
@@ -58,6 +60,10 @@ namespace EnhancedStreamChat.Chat
         public float FontSize = 3.4f;
         [ConfigMeta(Comment = "Allow movement of the chat")]
         public bool AllowMovement = false;
+        [ConfigMeta(Comment = "Reverse the order of the chat")]
+        public bool ReverseChatOrder = false;
+        [ConfigMeta(Comment = "The amount of space between lines in a chat message")]
+        public float LineSpacing = 1.5f;
 
         [ConfigSection("In-Menu Layout")]
         [ConfigMeta(Comment = "The world position of the chat while at the main menu")]
