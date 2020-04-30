@@ -111,6 +111,8 @@ namespace EnhancedStreamChat.Chat
             base.DidDeactivate(deactivationType);
         }
 
+        // TODO: eventually figure out a way to make this more modular incase we want to create multiple instances of the ChatViewController
+        private static ConcurrentQueue<IChatMessage> _backupMessageQueue = new ConcurrentQueue<IChatMessage>();
         protected override void OnDestroy()
         {
             base.OnDestroy();
@@ -119,6 +121,14 @@ namespace EnhancedStreamChat.Chat
             ChatConfig.instance.OnConfigChanged -= Instance_OnConfigUpdated;
             foreach (var msg in _activeChatMessages)
             {
+                if (msg.Text.ChatMessage != null)
+                {
+                    _backupMessageQueue.Enqueue(msg.Text.ChatMessage);
+                }
+                if (msg.SubText.ChatMessage != null)
+                {
+                    _backupMessageQueue.Enqueue(msg.SubText.ChatMessage);
+                }
                 Destroy(msg);
             }
             _activeChatMessages.Clear();
@@ -143,14 +153,14 @@ namespace EnhancedStreamChat.Chat
                 Destroy(_chatMoverMaterial);
                 _chatMoverMaterial = null;
             }
-            if (_loadedAssets.Count > 0)
-            {
-                foreach (var asset in _loadedAssets.Values)
-                {
-                    asset.Unload(true);
-                }
-                _loadedAssets.Clear();
-            }
+            //if (_loadedAssets.Count > 0)
+            //{
+            //    foreach (var asset in _loadedAssets.Values)
+            //    {
+            //        asset.Unload(true);
+            //    }
+            //    _loadedAssets.Clear();
+            //}
         }
 
         [UIAction("#post-parse")]
@@ -695,7 +705,7 @@ namespace EnhancedStreamChat.Chat
         }
 
         EnhancedTextMeshProUGUIWithBackground _lastMessage;
-        public async void OnTextMessageReceived(IChatService svc, IChatMessage msg)
+        public async void OnTextMessageReceived(IChatMessage msg)
         {
             if (_chatFont is null)
             {
@@ -790,6 +800,11 @@ namespace EnhancedStreamChat.Chat
                 {
                     msg.SubText.SetAllDirty();
                 }
+            }
+
+            while (_backupMessageQueue.TryDequeue(out var msg))
+            {
+                OnTextMessageReceived(msg);
             }
         }
 

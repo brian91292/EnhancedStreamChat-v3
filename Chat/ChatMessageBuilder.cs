@@ -31,7 +31,7 @@ namespace EnhancedStreamChat.Chat
                 {
                     continue;
                 }
-                if (!ChatImageProvider.instance.CachedImageInfo.ContainsKey(emote.Id))
+                if (!font.CharacterLookupTable.ContainsKey(emote.Id))
                 {
                     pendingEmoteDownloads.Add(emote.Id);
                     TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
@@ -56,7 +56,7 @@ namespace EnhancedStreamChat.Chat
                 {
                     continue;
                 }
-                if (!ChatImageProvider.instance.CachedImageInfo.ContainsKey(badge.Id))
+                if (!font.CharacterLookupTable.ContainsKey(badge.Id))
                 {
                     pendingEmoteDownloads.Add(badge.Id);
                     TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
@@ -78,7 +78,6 @@ namespace EnhancedStreamChat.Chat
             // Wait on all the resources to be ready
             return Task.WaitAll(tasks.ToArray(), 15000);
         }
-
 
         public static async Task<string> BuildMessage(IChatMessage msg, EnhancedFontInfo font)
         {

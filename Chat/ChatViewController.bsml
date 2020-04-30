@@ -13,10 +13,10 @@
         <tab tags ='settings-tab' tab-name='Layout'>
           <vertical pad='10' pad-top='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
             <bool-setting text='Allow Movement' pref-height='6' value='allow-movement' apply-on-change='true'></bool-setting>
+            <bool-setting text='Reverse Chat Order' pref-height='6' value='reverse-chat-order' apply-on-change='true'></bool-setting>
             <slider-setting text='Chat Width' min='5' max='1000' increment='5' pref-height='6' value='chat-width' apply-on-change='true' integer-only='true'></slider-setting>
             <slider-setting text='Chat Height' min='5' max='1000' increment='5' pref-height='6' value='chat-height' apply-on-change='true' integer-only='true'></slider-setting>
             <slider-setting text='Font Size' min='1' max='20' increment='0.1' pref-height='6' value='font-size' apply-on-change='true'></slider-setting>
-            <bool-setting text='Reverse Chat Order' pref-height='6' value='reverse-chat-order' apply-on-change='true'></bool-setting>
           </vertical>
         </tab>
         <tab tags ='settings-tab' tab-name='Colors'>
@@ -46,7 +46,7 @@
             <!--<clickable-text text='Donate' hover-hint='Buy me a pizza!' default-color='#00bcff' on-click='launch-kofi' highlight-color='cyan' font-size='5' ></clickable-text>-->
             <text text="~mod-version" font-size='4.5' word-wrapping='true' align='Center'></text>
           </vertical>
-          <vertical pad='8' spacing='3' pad-top='72' vertical-fit='PreferredSize' child-expand-height='false' child-align='MiddleCenter' pref-width='~settings-width'>
+          <vertical pad='10' spacing='3' pad-top='72' vertical-fit='PreferredSize' child-expand-height='false' child-align='MiddleCenter' pref-width='~settings-width'>
             <clickable-image src='EnhancedStreamChat.Resources.PizzaDog.jpg' hover-hint="Click to feed Pizza Dog a damn pizza." on-click='launch-kofi' preferred-height='35' preserve-aspect='true' highlight-color='#aaaaaa'></clickable-image>
             <text text="Enhanced Stream Chat is provided free of charge, and always will be. If you want to show some support, click on the Pizza Dog to open the donation page in your default browser." font-size='4.5' word-wrapping='true' align='Center'></text>
           </vertical>
