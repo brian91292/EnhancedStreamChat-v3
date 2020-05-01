@@ -37,7 +37,7 @@ namespace EnhancedStreamChat.Utilities
             matCopy.mainTextureScale = f.material.mainTextureScale;
             f.material = matCopy;
             f = UnityEngine.Object.Instantiate(f);
-            MaterialReferenceManager.AddFontAsset(f);
+            //MaterialReferenceManager.AddFontAsset(f);
             return f;
         }
     }

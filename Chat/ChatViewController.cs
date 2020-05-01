@@ -27,6 +27,7 @@ using BeatSaberMarkupLanguage.Components.Settings;
 using BeatSaberMarkupLanguage.Parser;
 using VRUIControls;
 using System.Diagnostics;
+using BeatSaberMarkupLanguage;
 
 namespace EnhancedStreamChat.Chat
 {
@@ -46,7 +47,7 @@ namespace EnhancedStreamChat.Chat
         private void Start()
         {
             _chatConfig = ChatConfig.instance;
-            StartCoroutine(LoadFonts());
+            StartCoroutine(WaitForFont());
             SetupScreens();
 
             if (_textPool == null)
@@ -704,6 +705,24 @@ namespace EnhancedStreamChat.Chat
             });
         }
 
+        public void OnChannelResourceDataCached(IChatChannel channel, Dictionary<string, IChatResourceData> resources)
+        {
+            MainThreadInvoker.Invoke(() =>
+            {
+                int count = 0;
+                foreach (var emote in resources)
+                {
+                    if (emote.Value.IsAnimated)
+                    {
+                        //Logger.log.Info($"Caching animated emote {emote.Key}");
+                        StartCoroutine(ChatImageProvider.instance.DownloadImage(emote.Value.Uri, "Emote", emote.Key, true));
+                        count++;
+                    }
+                }
+                Logger.log.Info($"{count} animated emotes total.");
+            });
+        }
+
         EnhancedTextMeshProUGUIWithBackground _lastMessage;
         public async void OnTextMessageReceived(IChatMessage msg)
         {
@@ -738,61 +757,24 @@ namespace EnhancedStreamChat.Chat
             });
         }
 
-        private static Dictionary<string, AssetBundle> _loadedAssets = new Dictionary<string, AssetBundle>();
-        private IEnumerator LoadFonts()
+        private IEnumerator WaitForFont()
         {
-            if (_chatFont != null)
+            if(_chatFont != null)
             {
                 yield break;
             }
 
-            if (!Directory.Exists(_fontPath))
-            {
-                Directory.CreateDirectory(_fontPath);
-            }
+           // yield return new WaitUntil(() => FontManager.IsInitialized);
 
-            string mainFontPath = Path.Combine(_fontPath, "main.fontasset");
-            if (!File.Exists(mainFontPath))
+            TMP_FontAsset font = null;
+            string fontName = _chatConfig.SystemFontName;
+            if (!FontManager.TryGetTMPFontByFamily(fontName, out font))
             {
-                File.WriteAllBytes(mainFontPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.main"));
+                Logger.log.Error($"Could not find font {fontName}! Falling back to Segoe UI");
+                fontName = "Segoe UI";
             }
+            _chatFont = new EnhancedFontInfo(BeatSaberUtils.SetupFont(font));
 
-            string symbolsPath = Path.Combine(_fontPath, "symbols.fontasset");
-            if (!File.Exists(symbolsPath))
-            {
-                File.WriteAllBytes(symbolsPath, BeatSaberMarkupLanguage.Utilities.GetResource(Assembly.GetExecutingAssembly(), "EnhancedStreamChat.Resources.Fonts.symbols"));
-            }
-
-            Logger.log.Info("Loading fonts");
-            List<TMP_FontAsset> fallbackFonts = new List<TMP_FontAsset>();
-
-            if (!_loadedAssets.TryGetValue(mainFontPath, out var mainAsset))
-            {
-                mainAsset = AssetBundle.LoadFromFile(mainFontPath);
-                _loadedAssets.Add(mainFontPath, mainAsset);
-            }
-            LoadFont(mainAsset, fallbackFonts);
-
-            foreach (var fontAssetPath in Directory.GetFiles(_fontPath, "*.fontasset", SearchOption.TopDirectoryOnly))
-            {
-                if (Path.GetFileName(fontAssetPath) != "main.fontasset")
-                {
-                    //Logger.log.Info($"AssetBundleName: {fontAssetPath}");
-                    if (!_loadedAssets.TryGetValue(fontAssetPath, out var fontAsset))
-                    {
-                        var fontLoadRequest = AssetBundle.LoadFromFileAsync(fontAssetPath);
-                        yield return fontLoadRequest;
-                        fontAsset = fontLoadRequest.assetBundle;
-                        _loadedAssets.Add(fontAssetPath, fontAsset);
-                    }
-                    LoadFont(fontAsset, fallbackFonts);
-                }
-            }
-            foreach (var font in fallbackFonts)
-            {
-                Logger.log.Info($"Adding {font.name} to fallback fonts!");
-                _chatFont.Font.fallbackFontAssetTable.Add(font);
-            }
             foreach (var msg in _activeChatMessages)
             {
                 msg.Text.SetAllDirty();
@@ -805,32 +787,6 @@ namespace EnhancedStreamChat.Chat
             while (_backupMessageQueue.TryDequeue(out var msg))
             {
                 OnTextMessageReceived(msg);
-            }
-        }
-
-        private void LoadFont(AssetBundle assetBundle, List<TMP_FontAsset> fallbackFonts)
-        {
-            foreach (var asset in assetBundle.LoadAllAssets())
-            {
-                if (asset is Font font)
-                {
-                    if (font.name == "main")
-                    {
-                        if (assetBundle.name == "main")
-                        {
-                            Logger.log.Info($"Main font: {font.fontNames[0]}");
-                            _chatFont = new EnhancedFontInfo(BeatSaberUtils.SetupFont(TMP_FontAsset.CreateFontAsset(font)));
-                            _chatFont.Font.name = font.fontNames[0] + " (Clone)";
-                        }
-                        else
-                        {
-                            //Logger.log.Info($"Fallback font: {font.fontNames[0]}");
-                            var fallbackFont = BeatSaberUtils.SetupFont(TMP_FontAsset.CreateFontAsset(font));
-                            fallbackFont.name = font.fontNames[0] + " (Clone)";
-                            fallbackFonts.Add(fallbackFont);
-                        }
-                    }
-                }
             }
         }
     }

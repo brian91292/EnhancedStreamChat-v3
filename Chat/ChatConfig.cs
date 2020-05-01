@@ -39,7 +39,9 @@ namespace EnhancedStreamChat.Chat
     {
         public static ChatConfig instance { get; private set; } = new ChatConfig(Path.Combine(Environment.CurrentDirectory, "UserData"), Assembly.GetExecutingAssembly().GetName().Name);
 
-        [ConfigSection("Colors")]
+        [ConfigSection("UI")]
+        [ConfigMeta(Comment = "The name of the system font to be used in chat")]
+        public string SystemFontName = "Segoe UI";
         [ConfigMeta(Comment = "The background color of the chat")]
         public string BackgroundColor = "#0000007F";
         [ConfigMeta(Comment = "The base color of the chat text.")]

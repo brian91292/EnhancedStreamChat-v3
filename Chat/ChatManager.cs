@@ -36,6 +36,7 @@ namespace EnhancedStreamChat.Chat
             _svcs.OnTextMessageReceived += QueueOrSendOnTextMessageReceived;
             _svcs.OnChatCleared += QueueOrSendOnClearChat;
             _svcs.OnMessageCleared += QueueOrSendOnClearMessage;
+            _svcs.OnChannelResourceDataCached += QueueOrSendOnChannelResourceDataCached;
             ChatImageProvider.TouchInstance();
             Task.Run(HandleOverflowMessageQueue);
             BSEvents.menuSceneLoadedFresh += BSEvents_menuSceneLoadedFresh;
@@ -64,6 +65,7 @@ namespace EnhancedStreamChat.Chat
                 _svcs.OnTextMessageReceived -= QueueOrSendOnTextMessageReceived;
                 _svcs.OnChatCleared -= QueueOrSendOnClearChat;
                 _svcs.OnMessageCleared -= QueueOrSendOnClearMessage;
+                _svcs.OnChannelResourceDataCached -= QueueOrSendOnChannelResourceDataCached;
                 BSEvents.menuSceneLoadedFresh -= BSEvents_menuSceneLoadedFresh;
             }
             if (_sc != null)
@@ -134,17 +136,35 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void QueueOrSendMessage<T>(IChatService svc, T data, Action<IChatService, T> action)
+        private void QueueOrSendMessage<A>(IChatService svc, A a, Action<IChatService, A> action)
         {
             if (_chatViewController == null || !_msgLock.Wait(50))
             {
-                _actionQueue.Enqueue(() => action.Invoke(svc, data));
+                _actionQueue.Enqueue(() => action.Invoke(svc, a));
             }
             else
             {
-                action.Invoke(svc, data);
+                action.Invoke(svc, a);
                 _msgLock.Release();
             }
+        }
+        private void QueueOrSendMessage<A, B>(IChatService svc, A a, B b, Action<IChatService, A, B> action)
+        {
+            if (_chatViewController == null || !_msgLock.Wait(50))
+            {
+                _actionQueue.Enqueue(() => action.Invoke(svc, a, b));
+            }
+            else
+            {
+                action.Invoke(svc, a, b);
+                _msgLock.Release();
+            }
+        }
+
+        private void QueueOrSendOnChannelResourceDataCached(IChatService svc, IChatChannel channel, Dictionary<string, IChatResourceData> resources) => QueueOrSendMessage(svc, channel, resources, OnChannelResourceDataCached);
+        private void OnChannelResourceDataCached(IChatService svc, IChatChannel channel, Dictionary<string, IChatResourceData> resources)
+        {
+            _chatViewController.OnChannelResourceDataCached(channel, resources);
         }
 
         private void QueueOrSendOnTextMessageReceived(IChatService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);

@@ -17,6 +17,7 @@ namespace EnhancedStreamChat.Chat
     public class ChatImageProvider : PersistentSingleton<ChatImageProvider>
     {
         private ConcurrentDictionary<string, EnhancedImageInfo> _cachedImageInfo = new ConcurrentDictionary<string, EnhancedImageInfo>();
+        private ConcurrentDictionary<string, Action<EnhancedImageInfo>> _activeDownloads = new ConcurrentDictionary<string, Action<EnhancedImageInfo>>();
         public ReadOnlyDictionary<string, EnhancedImageInfo> CachedImageInfo { get; internal set; }
        
 
@@ -24,8 +25,13 @@ namespace EnhancedStreamChat.Chat
         {
             CachedImageInfo = new ReadOnlyDictionary<string, EnhancedImageInfo>(_cachedImageInfo);
         }
-        public IEnumerator DownloadImage(string uri, string category, string id, bool isAnimated, Action<EnhancedImageInfo> OnDownloadComplete, bool isRetry = false)
+        public IEnumerator DownloadImage(string uri, string category, string id, bool isAnimated, Action<EnhancedImageInfo> OnDownloadComplete = null, bool isRetry = false)
         {
+            if(_activeDownloads.TryGetValue(id, out var activeDownload))
+            {
+                _activeDownloads[id] += OnDownloadComplete;
+                yield break;
+            }
             if (!_cachedImageInfo.TryGetValue(id, out var imageInfo))
             {
                 if (string.IsNullOrEmpty(uri))
@@ -34,6 +40,7 @@ namespace EnhancedStreamChat.Chat
                     OnDownloadComplete?.Invoke(null);
                     yield break;
                 }
+                _activeDownloads.TryAdd(id, OnDownloadComplete);
                 //Logger.log.Info($"Requesting image from uri: {uri}");
                 Sprite sprite = null;
                 int spriteWidth = 0, spriteHeight = 0;
@@ -46,6 +53,7 @@ namespace EnhancedStreamChat.Chat
                     {
                         // Failed to download due to http error, don't retry
                         OnDownloadComplete?.Invoke(null);
+                        _activeDownloads.TryRemove(id, out var d1);
                         yield break;
                     }
 
@@ -59,6 +67,7 @@ namespace EnhancedStreamChat.Chat
                             yield break;
                         }
                         OnDownloadComplete?.Invoke(null);
+                        _activeDownloads.TryRemove(id, out var d2);
                         yield break;
                     }
 
@@ -113,8 +122,13 @@ namespace EnhancedStreamChat.Chat
                     //Logger.log.Info($"Caching image info for {id}. {_cachedImageInfo.Count} images have been cached.");
                     _cachedImageInfo.TryAdd(id, imageInfo);
                 }
+                _activeDownloads[id]?.Invoke(imageInfo);
+                _activeDownloads.TryRemove(id, out var dl);
             }
-            OnDownloadComplete?.Invoke(imageInfo);
+            else
+            {
+                OnDownloadComplete?.Invoke(imageInfo);
+            }
         }
 
 
