@@ -139,13 +139,13 @@ namespace EnhancedStreamChat.Chat
                     if (msg.IsActionMessage)
                     {
                         // Message becomes the color of their name if it's an action message
-                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.Name}</b> ");
+                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.DisplayName}</b> ");
                         sb.Append("</color>");
                     }
                     else
                     {
                         // Insert username w/ color
-                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.Name}</b></color>: ");
+                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.DisplayName}</b></color>: ");
                     }
 
                     for (int i = 0; i < msg.Sender.Badges.Length; i++)

@@ -170,9 +170,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Chat\ChatConfig.cs" />
+    <Compile Include="Chat\ChatDisplay.cs" />
+    <Compile Include="Chat\ChatDisplay.Settings.cs" />
     <Compile Include="Chat\ChatImageProvider.cs" />
     <Compile Include="Chat\ChatManager.cs" />
-    <Compile Include="Chat\ChatViewController.cs" />
     <Compile Include="Graphics\EnhancedTextMeshProUGUIWithBackground.cs" />
     <Compile Include="Graphics\EnhancedImage.cs" />
     <Compile Include="Graphics\EnhancedImageInfo.cs" />
@@ -196,14 +197,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
-    <EmbeddedResource Include="Chat\ChatViewController.bsml" />
-    <None Include="Resources\Fonts\hk" />
-    <None Include="Resources\Fonts\jp" />
-    <None Include="Resources\Fonts\kr" />
-    <EmbeddedResource Include="Resources\Fonts\main" />
-    <None Include="Resources\Fonts\sc" />
-    <EmbeddedResource Include="Resources\Fonts\symbols" />
-    <None Include="Resources\Fonts\tc" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Twitch\" />
@@ -213,6 +206,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\PizzaDog.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Chat\ChatDisplay.bsml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

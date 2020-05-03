@@ -14,6 +14,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using ChatCore.Config;
+using BeatSaberMarkupLanguage;
 
 namespace EnhancedStreamChat.Chat
 {
@@ -73,25 +75,25 @@ namespace EnhancedStreamChat.Chat
                 //_sc.OnLogReceived -= _sc_OnLogReceived;
                 _sc.StopAllServices();
             }
-            if(_chatViewController != null)
+            if(_chatDisplay != null)
             {
-                Destroy(_chatViewController.gameObject);
-                _chatViewController = null;
+                Destroy(_chatDisplay.gameObject);
+                _chatDisplay = null;
             }
             MainThreadInvoker.ClearQueue();
             ChatImageProvider.ClearCache();
         }
 
-        ChatViewController _chatViewController;
+        ChatDisplay _chatDisplay;
         private void BSEvents_menuSceneLoadedFresh()
         {
-            if (_chatViewController != null)
+            if (_chatDisplay != null)
             {
-                DestroyImmediate(_chatViewController.gameObject);
-                _chatViewController = null;
+                DestroyImmediate(_chatDisplay.gameObject);
+                _chatDisplay = null;
                 MainThreadInvoker.ClearQueue();
             }
-            _chatViewController = BeatSaberMarkupLanguage.BeatSaberUI.CreateViewController<ChatViewController>();
+            _chatDisplay = BeatSaberUI.CreateViewController<ChatDisplay>();
         }
 
         private ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
@@ -100,11 +102,11 @@ namespace EnhancedStreamChat.Chat
         {
             while (!_applicationIsQuitting)
             {
-                if (_chatViewController == null)
+                if (_chatDisplay == null)
                 {
                     // If _chatViewController isn't instantiated yet, lock the semaphore and wait until it is.
                     await _msgLock.WaitAsync();
-                    while (_chatViewController == null)
+                    while (_chatDisplay == null)
                     {
                         await Task.Delay(1000);
                     }
@@ -138,7 +140,7 @@ namespace EnhancedStreamChat.Chat
 
         private void QueueOrSendMessage<A>(IChatService svc, A a, Action<IChatService, A> action)
         {
-            if (_chatViewController == null || !_msgLock.Wait(50))
+            if (_chatDisplay == null || !_msgLock.Wait(50))
             {
                 _actionQueue.Enqueue(() => action.Invoke(svc, a));
             }
@@ -150,7 +152,7 @@ namespace EnhancedStreamChat.Chat
         }
         private void QueueOrSendMessage<A, B>(IChatService svc, A a, B b, Action<IChatService, A, B> action)
         {
-            if (_chatViewController == null || !_msgLock.Wait(50))
+            if (_chatDisplay == null || !_msgLock.Wait(50))
             {
                 _actionQueue.Enqueue(() => action.Invoke(svc, a, b));
             }
@@ -164,31 +166,31 @@ namespace EnhancedStreamChat.Chat
         private void QueueOrSendOnChannelResourceDataCached(IChatService svc, IChatChannel channel, Dictionary<string, IChatResourceData> resources) => QueueOrSendMessage(svc, channel, resources, OnChannelResourceDataCached);
         private void OnChannelResourceDataCached(IChatService svc, IChatChannel channel, Dictionary<string, IChatResourceData> resources)
         {
-            _chatViewController.OnChannelResourceDataCached(channel, resources);
+            _chatDisplay.OnChannelResourceDataCached(channel, resources);
         }
 
         private void QueueOrSendOnTextMessageReceived(IChatService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
         private void OnTextMesssageReceived(IChatService svc, IChatMessage msg)
         {
-            _chatViewController.OnTextMessageReceived(msg);
+            _chatDisplay.OnTextMessageReceived(msg);
         }
 
         private void QueueOrSendOnJoinChannel(IChatService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
         private void OnJoinChannel(IChatService svc, IChatChannel channel)
         {
-            _chatViewController.OnJoinChannel(svc, channel);
+            _chatDisplay.OnJoinChannel(svc, channel);
         }
 
         private void QueueOrSendOnClearMessage(IChatService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
         private void OnClearMessage(IChatService svc, string messageId)
         {
-            _chatViewController.OnMessageCleared(messageId);
+            _chatDisplay.OnMessageCleared(messageId);
         }
 
         private void QueueOrSendOnClearChat(IChatService svc, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
         private void OnClearChat(IChatService svc, string userId)
         {
-            _chatViewController.OnChatCleared(userId);
+            _chatDisplay.OnChatCleared(userId);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace EnhancedStreamChat.Chat
         }
         public IEnumerator DownloadImage(string uri, string category, string id, bool isAnimated, Action<EnhancedImageInfo> OnDownloadComplete = null, bool isRetry = false)
         {
-            if(_activeDownloads.TryGetValue(id, out var activeDownload))
+            if(!isRetry && _activeDownloads.TryGetValue(id, out var activeDownload))
             {
                 _activeDownloads[id] += OnDownloadComplete;
                 yield break;
