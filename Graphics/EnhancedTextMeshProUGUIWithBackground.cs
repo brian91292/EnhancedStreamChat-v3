@@ -14,7 +14,7 @@ namespace EnhancedStreamChat.Graphics
         public EnhancedTextMeshProUGUI Text { get; internal set; }
         public EnhancedTextMeshProUGUI SubText { get; internal set; }
 
-        public event Action OnRenderRebuildComplete;
+        public event Action OnLatePreRenderRebuildComplete;
 
         private Image _highlight, _accent;
         private VerticalLayoutGroup _verticalLayoutGroup;
@@ -156,7 +156,7 @@ namespace EnhancedStreamChat.Graphics
         private void Text_OnLatePreRenderRebuildComplete()
         {
             (_accent.gameObject.transform as RectTransform).sizeDelta = new Vector2(1, (transform as RectTransform).sizeDelta.y);
-            OnRenderRebuildComplete?.Invoke();
+            OnLatePreRenderRebuildComplete?.Invoke();
         }
     }
 }

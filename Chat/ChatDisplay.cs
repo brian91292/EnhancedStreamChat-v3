@@ -69,7 +69,7 @@ namespace EnhancedStreamChat.Chat
                         msg.Text.ChatMessage = null;
                         msg.SubText.text = "";
                         msg.SubText.ChatMessage = null;
-                        msg.OnRenderRebuildComplete -= OnRenderRebuildComplete;
+                        msg.OnLatePreRenderRebuildComplete -= OnRenderRebuildComplete;
                         msg.gameObject.SetActive(false);
                         msg.Text.ClearImages();
                         msg.SubText.ClearImages();
@@ -96,7 +96,7 @@ namespace EnhancedStreamChat.Chat
             BSEvents.gameSceneActive -= BSEvents_gameSceneActive;
             foreach (var msg in _messages)
             {
-                msg.OnRenderRebuildComplete -= OnRenderRebuildComplete;
+                msg.OnLatePreRenderRebuildComplete -= OnRenderRebuildComplete;
                 if (msg.Text.ChatMessage != null)
                 {
                     _backupMessageQueue.Enqueue(msg.Text.ChatMessage);
@@ -209,29 +209,17 @@ namespace EnhancedStreamChat.Chat
 
         private void OnRenderRebuildComplete()
         {
-            StartCoroutine(UpdateChatMessagePositions());
-        }
-
-        private IEnumerator AddMessageCoroutine(EnhancedTextMeshProUGUIWithBackground newMsg)
-        {
-            yield return null;
-            var newMsgHeight = (newMsg.transform as RectTransform).sizeDelta.y;
-            foreach (var msg in _messages)
-            {
-                msg.transform.localPosition += ReverseChatOrder ? -new Vector3(0, newMsgHeight) : new Vector3(0, newMsgHeight);
-            }
-            _messages.Enqueue(newMsg);
-            newMsg.transform.localPosition = ReverseChatOrder ? new Vector3(0, ChatHeight - newMsgHeight) : Vector3.zero;
-            newMsg.gameObject.SetActive(true);
-            ClearOldMessages();
-
-            yield return null;
-            newMsg.OnRenderRebuildComplete += OnRenderRebuildComplete;
+            UpdateChatMessagePositions();
         }
 
         public void AddMessage(EnhancedTextMeshProUGUIWithBackground newMsg)
         {
-            StartCoroutine(AddMessageCoroutine(newMsg));
+            _messages.Enqueue(newMsg);
+            newMsg.transform.localPosition = ReverseChatOrder ? new Vector3(0f, ChatHeight - (newMsg.transform as RectTransform).sizeDelta.y) : Vector3.zero;
+            UpdateChatMessage(newMsg);
+            ClearOldMessages();
+            newMsg.OnLatePreRenderRebuildComplete += OnRenderRebuildComplete;
+            newMsg.gameObject.SetActive(true);
         }
 
         private void UpdateChatUI()
@@ -271,18 +259,10 @@ namespace EnhancedStreamChat.Chat
             UpdateChatMessagePositions();
         }
 
-        private bool _pendingPositionUpdate = false;
-        private IEnumerator UpdateChatMessagePositions()
+        private void UpdateChatMessagePositions()
         {
-            if (_pendingPositionUpdate == true)
-            {
-                yield break;
-            }
-            _pendingPositionUpdate = true;
-            yield return null;
             float msgPos = ReverseChatOrder ? ChatHeight : 0;
-            IEnumerable<EnhancedTextMeshProUGUIWithBackground> msgArray = _messages.AsEnumerable();
-            foreach (var chatMsg in (!ReverseChatOrder ? msgArray.Reverse() : msgArray).ToArray())
+            foreach (var chatMsg in _messages.AsEnumerable().Reverse())
             {
                 var msgHeight = (chatMsg.transform as RectTransform).sizeDelta.y;
                 if(ReverseChatOrder)
@@ -295,8 +275,6 @@ namespace EnhancedStreamChat.Chat
                     msgPos += msgHeight;
                 }
             }
-            yield return null;
-            _pendingPositionUpdate = false;
         }
 
         private void Instance_OnConfigChanged(ChatConfig obj)
@@ -361,7 +339,7 @@ namespace EnhancedStreamChat.Chat
             return sb.ToString();
         }
 
-        private IEnumerator ClearMessage(EnhancedTextMeshProUGUIWithBackground msg)
+        private void ClearMessage(EnhancedTextMeshProUGUIWithBackground msg)
         {
             // Only clear non-system messages
             if (!msg.Text.ChatMessage.IsSystemMessage)
@@ -373,7 +351,7 @@ namespace EnhancedStreamChat.Chat
             {
                 msg.SubText.text = BuildClearedMessage(msg.SubText);
             }
-            yield return UpdateChatMessagePositions();
+            UpdateChatMessagePositions();
         }
 
         public void OnMessageCleared(string messageId)
@@ -390,7 +368,7 @@ namespace EnhancedStreamChat.Chat
                         }
                         if (msg.Text.ChatMessage.Id == messageId)
                         {
-                            StartCoroutine(ClearMessage(msg));
+                            ClearMessage(msg);
                         }
                     }
                 });
@@ -409,7 +387,7 @@ namespace EnhancedStreamChat.Chat
                     }
                     if (userId == null || msg.Text.ChatMessage.Sender.Id == userId)
                     {
-                        StartCoroutine(ClearMessage(msg));
+                        ClearMessage(msg);
                     }
                 }
             });
@@ -424,8 +402,6 @@ namespace EnhancedStreamChat.Chat
                 newMsg.HighlightEnabled = true;
                 newMsg.HighlightColor = Color.gray.ColorWithAlpha(0.05f);
                 AddMessage(newMsg);
-
-                UpdateChatMessage(newMsg);
             });
         }
 
@@ -459,6 +435,7 @@ namespace EnhancedStreamChat.Chat
                     _lastMessage.SubText.text = parsedMessage;
                     _lastMessage.SubText.ChatMessage = msg;
                     _lastMessage.SubTextEnabled = true;
+                    UpdateChatMessage(_lastMessage);
                 }
                 else
                 {
@@ -468,7 +445,6 @@ namespace EnhancedStreamChat.Chat
                     AddMessage(newMsg);
                     _lastMessage = newMsg;
                 }
-                UpdateChatMessage(_lastMessage);
             });
         }
 
