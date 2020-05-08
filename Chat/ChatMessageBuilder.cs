@@ -100,7 +100,7 @@ namespace EnhancedStreamChat.Chat
                     badges.Push(badgeInfo);
                 }
 
-                StringBuilder sb = new StringBuilder(msg.Message);
+                StringBuilder sb = new StringBuilder(msg.Message.Replace("<", "<\u2060")); // Replace all instances of < with a zero-width non-breaking character
                 foreach (var emote in msg.Emotes)
                 {
                     if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
@@ -118,7 +118,7 @@ namespace EnhancedStreamChat.Chat
                     // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
                     sb.Replace(emote.Name, emote switch
                     {
-                        TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0</noparse><color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color><noparse>",
+                        TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0<color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color>",
                         _ => char.ConvertFromUtf32((int)character)
                     }, 
                     emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
@@ -132,10 +132,6 @@ namespace EnhancedStreamChat.Chat
                 }
                 else
                 {
-                    // Don't parse html tags in the message
-                    sb.Insert(0, "<noparse>");
-                    sb.Append("</noparse>");
-
                     if (msg.IsActionMessage)
                     {
                         // Message becomes the color of their name if it's an action message

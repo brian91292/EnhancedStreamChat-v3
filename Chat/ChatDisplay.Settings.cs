@@ -70,7 +70,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.AccentColor = value;
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -82,7 +82,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.HighlightColor = value;
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -94,7 +94,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.PingColor = value;
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -118,7 +118,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.TextColor = value;
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -130,7 +130,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.FontSize = value;
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -155,7 +155,7 @@ namespace EnhancedStreamChat.Chat
             {
                 _chatConfig.ChatWidth = value;
                 _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -168,7 +168,7 @@ namespace EnhancedStreamChat.Chat
             {
                 _chatConfig.ChatHeight = value;
                 _chatScreen.ScreenSize = new Vector2(ChatWidth, ChatHeight);
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
@@ -230,7 +230,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.ReverseChatOrder = value;
-                UpdateChatMessages();
+                UpdateMessages();
                 NotifyPropertyChanged();
             }
         }
