@@ -150,13 +150,13 @@ namespace EnhancedStreamChat.Chat
                 _chatScreen.SetRootViewController(this, true);
                 _rootGameObject = new GameObject();
                 DontDestroyOnLoad(_rootGameObject);
-                _chatMoverMaterial = Instantiate(BeatSaberUtils.UINoGlow);
+                _chatMoverMaterial = Instantiate(BeatSaberUtils.UINoGlowMaterial);
                 _chatMoverMaterial.color = Color.clear;
                 var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
                 renderer.material = _chatMoverMaterial;
                 _chatScreen.transform.SetParent(_rootGameObject.transform);
                 _bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
-                _bg.material = Instantiate(BeatSaberUtils.UINoGlow);
+                _bg.material = Instantiate(BeatSaberUtils.UINoGlowMaterial);
                 _bg.color = BackgroundColor;
                 AddToVRPointer();
             }
@@ -474,7 +474,8 @@ namespace EnhancedStreamChat.Chat
                 Logger.log.Error($"Could not find font {fontName}! Falling back to Segoe UI");
                 fontName = "Segoe UI";
             }
-            _chatFont = new EnhancedFontInfo(BeatSaberUtils.SetupFont(font));
+            font.material.shader = BeatSaberUtils.TMPNoGlowFontShader;
+            _chatFont = new EnhancedFontInfo(font);
 
             foreach (var msg in _messages)
             {

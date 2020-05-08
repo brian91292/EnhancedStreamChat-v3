@@ -109,7 +109,7 @@ namespace EnhancedStreamChat.Graphics
                             {
                                 img.sprite = imageInfo.Sprite;
                             }
-                            img.material = BeatSaberUtils.UINoGlow;
+                            img.material = BeatSaberUtils.UINoGlowMaterial;
                             img.rectTransform.localScale = new Vector3(fontScale * 1.08f, fontScale * 1.08f, fontScale * 1.08f);
                             img.rectTransform.sizeDelta = new Vector2(imageInfo.Width, imageInfo.Height);
                             img.rectTransform.SetParent(rectTransform, false);

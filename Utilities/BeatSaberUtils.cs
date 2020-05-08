@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BeatSaberMarkupLanguage;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ namespace EnhancedStreamChat.Utilities
     public static class BeatSaberUtils
     {
         private static Material _noGlow;
-        public static Material UINoGlow
+        public static Material UINoGlowMaterial
         {
             get
             {
@@ -27,18 +28,28 @@ namespace EnhancedStreamChat.Utilities
             }
         }
 
-        // DaNike to the rescue 
-        public static TMP_FontAsset SetupFont(TMP_FontAsset f)
+        private static Shader _tmpNoGlowFontShader;
+        public static Shader TMPNoGlowFontShader
         {
-            var originalFont = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().Last(f2 => f2.name == "Teko-Medium SDF No Glow");
-            var matCopy = UnityEngine.Object.Instantiate(originalFont.material);
-            matCopy.mainTexture = f.material.mainTexture;
-            matCopy.mainTextureOffset = f.material.mainTextureOffset;
-            matCopy.mainTextureScale = f.material.mainTextureScale;
-            f.material = matCopy;
-            f = UnityEngine.Object.Instantiate(f);
-            MaterialReferenceManager.AddFontAsset(f);
-            return f;
+            get
+            {
+                if(_tmpNoGlowFontShader == null)
+                {
+                    _tmpNoGlowFontShader = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().Last(f2 => f2.name == "Teko-Medium SDF No Glow")?.material?.shader;
+                }
+                return _tmpNoGlowFontShader;
+            }
+        }
+
+        // DaNike to the rescue 
+        public static bool TryGetTMPFontByFamily(string family, out TMP_FontAsset font)
+        {
+            if(FontManager.TryGetTMPFontByFamily(family, out font))
+            {
+                font.material.shader = TMPNoGlowFontShader;
+                return true;
+            }
+            return false;
         }
     }
 }
