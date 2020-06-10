@@ -100,7 +100,7 @@ namespace EnhancedStreamChat.Chat
                     badges.Push(badgeInfo);
                 }
 
-                StringBuilder sb = new StringBuilder(msg.Message.Replace("<", "<\u2060")); // Replace all instances of < with a zero-width non-breaking character
+                StringBuilder sb = new StringBuilder(msg.Message); // Replace all instances of < with a zero-width non-breaking character
                 foreach (var emote in msg.Emotes)
                 {
                     if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
@@ -115,14 +115,24 @@ namespace EnhancedStreamChat.Chat
                         continue;
                     }
 
-                    // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
-                    sb.Replace(emote.Name, emote switch
+                    try
                     {
-                        TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0<color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color>",
-                        _ => char.ConvertFromUtf32((int)character)
-                    }, 
-                    emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                        // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
+                        sb.Replace(emote.Name, emote switch
+                        {
+                            TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0<color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color>",
+                            _ => char.ConvertFromUtf32((int)character)
+                        },
+                        emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                    }
+                    catch(Exception ex)
+                    {
+                        Logger.log.Error($"An unknown error occurred while trying to swap emote {emote.Name} into string of length {sb.Length} at location ({emote.StartIndex}, {emote.EndIndex})");
+                    }
                 }
+
+                // Escape all html tags in the message
+                sb.Replace("<", "<\u2060");
 
                 if (msg.IsSystemMessage)
                 {
