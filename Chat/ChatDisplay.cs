@@ -422,16 +422,22 @@ namespace EnhancedStreamChat.Chat
             MainThreadInvoker.Invoke(() =>
             {
                 int count = 0;
-                foreach (var emote in resources)
+                if (_chatConfig.PreCacheAnimatedEmotes)
                 {
-                    if (emote.Value.IsAnimated)
+                    foreach (var emote in resources)
                     {
-                        //Logger.log.Info($"Caching animated emote {emote.Key}");
-                        StartCoroutine(ChatImageProvider.instance.DownloadImage(emote.Value.Uri, "Emote", emote.Key, true));
-                        count++;
+                        if (emote.Value.IsAnimated)
+                        {
+                            StartCoroutine(ChatImageProvider.instance.PrecacheAnimatedImage(emote.Value.Uri, emote.Key, 110));
+                            count++;
+                        }
                     }
+                    Logger.log.Info($"Pre-cached {count} animated emotes.");
                 }
-                Logger.log.Info($"{count} animated emotes total.");
+                else
+                {
+                    Logger.log.Warn("Pre-caching of animated emotes disabled by the user. If you're experiencing lag, re-enable emote precaching.");
+                }
             });
         }
 

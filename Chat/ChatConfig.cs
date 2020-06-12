@@ -39,6 +39,10 @@ namespace EnhancedStreamChat.Chat
     {
         public static ChatConfig instance { get; private set; } = new ChatConfig(Path.Combine(Environment.CurrentDirectory, "UserData"), Assembly.GetExecutingAssembly().GetName().Name);
 
+        [ConfigSection("Main")]
+        [ConfigMeta(Comment = "When set to true, animated emotes will be precached in memory when the game starts.")]
+        public bool PreCacheAnimatedEmotes = true;
+
         [ConfigSection("UI")]
         [ConfigMeta(Comment = "The name of the system font to be used in chat")]
         public string SystemFontName = "Segoe UI";
