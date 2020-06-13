@@ -39,17 +39,23 @@ namespace EnhancedStreamChat.Chat
     {
         public static ChatConfig instance { get; private set; } = new ChatConfig(Path.Combine(Environment.CurrentDirectory, "UserData"), Assembly.GetExecutingAssembly().GetName().Name);
 
-        [ConfigSection("Colors")]
+        [ConfigSection("Main")]
+        [ConfigMeta(Comment = "When set to true, animated emotes will be precached in memory when the game starts.")]
+        public bool PreCacheAnimatedEmotes = true;
+
+        [ConfigSection("UI")]
+        [ConfigMeta(Comment = "The name of the system font to be used in chat")]
+        public string SystemFontName = "Segoe UI";
         [ConfigMeta(Comment = "The background color of the chat")]
-        public string BackgroundColor = "#0000007F";
+        public Color BackgroundColor = Color.black.ColorWithAlpha(0.5f);
         [ConfigMeta(Comment = "The base color of the chat text.")]
-        public string TextColor = "#FFFFFFFF";
+        public Color TextColor = Color.white;
         [ConfigMeta(Comment = "The accent color to be used on system messages")]
-        public string AccentColor = "#9147FFFF";
+        public Color AccentColor = new Color(0.57f, 0.28f, 1f, 1f);
         [ConfigMeta(Comment = "The highlight color to be used on system messages")]
-        public string HighlightColor = "#9147FF10";
+        public Color HighlightColor = new Color(0.57f, 0.28f, 1f, 0.06f);
         [ConfigMeta(Comment = "The color pings will be highlighted as in chat")]
-        public string PingColor = "#FF000022";
+        public Color PingColor = new Color(1f, 0f, 0f, 0.13f);
 
         [ConfigSection("General Layout")]
         [ConfigMeta(Comment = "The width of the chat")]
@@ -62,8 +68,6 @@ namespace EnhancedStreamChat.Chat
         public bool AllowMovement = false;
         [ConfigMeta(Comment = "Reverse the order of the chat")]
         public bool ReverseChatOrder = false;
-        [ConfigMeta(Comment = "The amount of space between lines in a chat message")]
-        public float LineSpacing = 1.5f;
 
         [ConfigSection("In-Menu Layout")]
         [ConfigMeta(Comment = "The world position of the chat while at the main menu")]

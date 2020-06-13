@@ -14,6 +14,8 @@ namespace EnhancedStreamChat.Graphics
         public EnhancedTextMeshProUGUI Text { get; internal set; }
         public EnhancedTextMeshProUGUI SubText { get; internal set; }
 
+        public event Action OnLatePreRenderRebuildComplete;
+
         private Image _highlight, _accent;
         private VerticalLayoutGroup _verticalLayoutGroup;
         public Vector2 Size
@@ -107,7 +109,7 @@ namespace EnhancedStreamChat.Graphics
         private void Awake()
         {
             _highlight = gameObject.AddComponent<Image>();
-            _highlight.material = BeatSaberUtils.UINoGlow;
+            _highlight.material = BeatSaberUtils.UINoGlowMaterial;
             Text = new GameObject().AddComponent<EnhancedTextMeshProUGUI>();
             DontDestroyOnLoad(Text.gameObject);
             Text.OnLatePreRenderRebuildComplete += Text_OnLatePreRenderRebuildComplete;
@@ -118,7 +120,7 @@ namespace EnhancedStreamChat.Graphics
 
             _accent = new GameObject().AddComponent<Image>();
             DontDestroyOnLoad(_accent.gameObject);
-            _accent.material = BeatSaberUtils.UINoGlow;
+            _accent.material = BeatSaberUtils.UINoGlowMaterial;
             _accent.color = Color.yellow;
 
             _verticalLayoutGroup = gameObject.AddComponent<VerticalLayoutGroup>();
@@ -154,6 +156,7 @@ namespace EnhancedStreamChat.Graphics
         private void Text_OnLatePreRenderRebuildComplete()
         {
             (_accent.gameObject.transform as RectTransform).sizeDelta = new Vector2(1, (transform as RectTransform).sizeDelta.y);
+            OnLatePreRenderRebuildComplete?.Invoke();
         }
     }
 }

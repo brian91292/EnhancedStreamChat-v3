@@ -1,4 +1,5 @@
 ﻿using BeatSaberMarkupLanguage.Animations;
+using ChatCore.Models;
 using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
 using System;
@@ -6,6 +7,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,105 +20,207 @@ namespace EnhancedStreamChat.Chat
     {
         private ConcurrentDictionary<string, EnhancedImageInfo> _cachedImageInfo = new ConcurrentDictionary<string, EnhancedImageInfo>();
         public ReadOnlyDictionary<string, EnhancedImageInfo> CachedImageInfo { get; internal set; }
-       
 
+        private ConcurrentDictionary<string, Action<byte[]>> _activeDownloads = new ConcurrentDictionary<string, Action<byte[]>>();
+        private ConcurrentDictionary<string, Texture2D> _cachedSpriteSheets = new ConcurrentDictionary<string, Texture2D>();
+        
         private void Awake()
         {
             CachedImageInfo = new ReadOnlyDictionary<string, EnhancedImageInfo>(_cachedImageInfo);
         }
-        public IEnumerator DownloadImage(string uri, string category, string id, bool isAnimated, Action<EnhancedImageInfo> OnDownloadComplete, bool isRetry = false)
+
+        /// <summary>
+        /// Retrieves the requested content from the provided Uri. Don't yield to this function, as it may return instantly if the download is already queued when you request it.
+        /// <para>
+        /// The <paramref name="Finally"/> callback will *always* be called for this function. If it returns an empty byte array, that should be considered a failure.
+        /// </para>
+        /// </summary>
+        /// <param name="uri">The resource location</param>
+        /// <param name="Finally">A callback that occurs after the resource is retrieved. This will always occur even if the resource is already cached.</param>
+        public IEnumerator DownloadContent(string uri, Action<byte[]> Finally, bool isRetry = false)
         {
-            if (!_cachedImageInfo.TryGetValue(id, out var imageInfo))
+            if (string.IsNullOrEmpty(uri))
             {
-                if (string.IsNullOrEmpty(uri))
+                Logger.log.Error($"URI is null or empty in request for resource {uri}. Aborting!");
+                Finally?.Invoke(null);
+                yield break;
+            }
+
+            if (!isRetry && _activeDownloads.TryGetValue(uri, out var activeDownload))
+            {
+                Logger.log.Info($"Request already active for {uri}");
+                yield break;
+            }
+
+            if(!_activeDownloads.ContainsKey(uri))
+            {
+                _activeDownloads.TryAdd(uri, Finally);
+            }
+            _activeDownloads[uri] -= Finally;
+            _activeDownloads[uri] += Finally;
+
+            using (UnityWebRequest wr = UnityWebRequest.Get(uri))
+            {
+                yield return wr.SendWebRequest();
+                if (wr.isHttpError)
                 {
-                    Logger.log.Error($"URI is null or empty in request for resource {id}. Aborting!");
-                    OnDownloadComplete?.Invoke(null);
+                    // Failed to download due to http error, don't retry
+                    _activeDownloads[uri]?.Invoke(new byte[0]);
+                    _activeDownloads.TryRemove(uri, out var d1);
                     yield break;
                 }
-                //Logger.log.Info($"Requesting image from uri: {uri}");
-                Sprite sprite = null;
-                int spriteWidth = 0, spriteHeight = 0;
-                AnimationControllerData animControllerData = null;
-                using (UnityWebRequest wr = UnityWebRequest.Get(uri))
-                {
-                    yield return wr.SendWebRequest();
 
-                    if (wr.isHttpError)
+                if (wr.isNetworkError)
+                {
+                    if (!isRetry)
                     {
-                        // Failed to download due to http error, don't retry
-                        OnDownloadComplete?.Invoke(null);
+                        Logger.log.Error($"A network error occurred during request to {uri}. Retrying in 3 seconds... {wr.error}");
+                        yield return new WaitForSeconds(3);
+                        StartCoroutine(DownloadContent(uri, Finally, true));
                         yield break;
                     }
-
-                    if (wr.isNetworkError)
-                    {
-                        if (!isRetry)
-                        {
-                            Logger.log.Error($"A network error occurred during request to {uri}. Retrying in 3 seconds... {wr.error}");
-                            yield return new WaitForSeconds(3);
-                            StartCoroutine(DownloadImage(uri, category, id, isAnimated, OnDownloadComplete, true));
-                            yield break;
-                        }
-                        OnDownloadComplete?.Invoke(null);
-                        yield break;
-                    }
-
-                    if (isAnimated)
-                    {
-                        AnimationLoader.Process(AnimationType.GIF, wr.downloadHandler.data,
-                            (tex, atlas, delays, width, height) =>
-                            {
-                                animControllerData = AnimationController.instance.Register(id, tex, atlas, delays);
-                                sprite = animControllerData.sprite;
-                                spriteWidth = width;
-                                spriteHeight = height;
-                            }
-                        );
-                        yield return new WaitUntil(() => animControllerData != null);
-                    }
-                    else
-                    {
-                        try
-                        {
-                            sprite = GraphicUtils.LoadSpriteRaw(wr.downloadHandler.data);
-                            spriteWidth = sprite.texture.width;
-                            spriteHeight = sprite.texture.height;
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.log.Error(ex);
-                            sprite = null;
-                        }
-                    }
+                    _activeDownloads[uri]?.Invoke(new byte[0]);
+                    _activeDownloads.TryRemove(uri, out var d2);
+                    yield break;
                 }
-                if (sprite != null)
-                {
-                    float scale = 1.0f;
-                    float minSize = category == "Emote" ? 100 : 90;
-                    if (spriteHeight < minSize)
-                    {
-                        scale = minSize / spriteHeight;
-                    }
-                    spriteWidth = (int)(scale * spriteWidth);
-                    spriteHeight = (int)(scale * spriteHeight);
 
-                    sprite.texture.wrapMode = TextureWrapMode.Clamp;
-                    imageInfo = new EnhancedImageInfo()
-                    {
-                        ImageId = id,
-                        Sprite = sprite,
-                        Width = spriteWidth,
-                        Height = spriteHeight,
-                        AnimControllerData = animControllerData
-                    };
-                    //Logger.log.Info($"Caching image info for {id}. {_cachedImageInfo.Count} images have been cached.");
-                    _cachedImageInfo.TryAdd(id, imageInfo);
-                }
+                var data = wr.downloadHandler.data;
+                _activeDownloads[uri]?.Invoke(data);
+                _activeDownloads.TryRemove(uri, out var d3);
             }
-            OnDownloadComplete?.Invoke(imageInfo);
         }
 
+        public IEnumerator PrecacheAnimatedImage(string uri, string id, int forcedHeight = -1)
+        {
+            yield return TryCacheSingleImage(id, uri, true);
+        }
+
+
+        private void SetImageHeight(ref int spriteHeight, ref int spriteWidth, int height)
+        {
+            float scale = 1.0f;
+            if (spriteHeight != (float)height)
+            {
+                scale = (float)height / spriteHeight;
+            }
+            spriteWidth = (int)(scale * spriteWidth);
+            spriteHeight = (int)(scale * spriteHeight);
+        }
+
+        public IEnumerator TryCacheSingleImage(string id, string uri, bool isAnimated, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        {
+            if(_cachedImageInfo.TryGetValue(id, out var info))
+            {
+                Finally?.Invoke(info);
+                yield break;
+            }
+
+            StartCoroutine(ChatImageProvider.instance.DownloadContent(uri, (bytes) =>
+            {
+                Logger.log.Info($"Finished download content for emote {id}!");
+                StartCoroutine(OnSingleImageCached(bytes, id, isAnimated, Finally, forcedHeight));
+            }));
+        }
+
+        public IEnumerator OnSingleImageCached(byte[] bytes, string id, bool isAnimated, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        {
+            Sprite sprite = null;
+            int spriteWidth = 0, spriteHeight = 0;
+            AnimationControllerData animControllerData = null;
+            if (isAnimated)
+            {
+                AnimationLoader.Process(AnimationType.GIF, bytes, (tex, atlas, delays, width, height) =>
+                {
+                    animControllerData = AnimationController.instance.Register(id, tex, atlas, delays);
+                    sprite = animControllerData.sprite;
+                    spriteWidth = width;
+                    spriteHeight = height;
+                });
+                yield return new WaitUntil(() => animControllerData != null);
+            }
+            else
+            {
+                try
+                {
+                    sprite = GraphicUtils.LoadSpriteRaw(bytes);
+                    spriteWidth = sprite.texture.width;
+                    spriteHeight = sprite.texture.height;
+                }
+                catch (Exception ex)
+                {
+                    Logger.log.Error(ex);
+                    sprite = null;
+                }
+            }
+            EnhancedImageInfo ret = null;
+            if (sprite != null)
+            {
+                if (forcedHeight != -1)
+                {
+                    SetImageHeight(ref spriteWidth, ref spriteHeight, forcedHeight);
+                }
+                ret = new EnhancedImageInfo()
+                {
+                    ImageId = id,
+                    Sprite = sprite,
+                    Width = spriteWidth,
+                    Height = spriteHeight,
+                    AnimControllerData = animControllerData
+                };
+                _cachedImageInfo[id] = ret;
+            }
+            Finally?.Invoke(ret);
+        }
+
+        public void TryCacheSpriteSheetImage(string id, string uri, ImageRect rect, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        {
+            if (_cachedImageInfo.TryGetValue(id, out var info))
+            {
+                Finally?.Invoke(info);
+                return;
+            }
+
+            if(_cachedSpriteSheets.TryGetValue(uri, out var tex))
+            {
+                CacheSpriteSheetImage(id, rect, tex, Finally, forcedHeight);
+            }
+            else
+            {
+                StartCoroutine(ChatImageProvider.instance.DownloadContent(uri, (bytes) =>
+                {
+                    Logger.log.Info($"Finished download content for emote {id}!");
+                    var tex = GraphicUtils.LoadTextureRaw(bytes);
+                    _cachedSpriteSheets[uri] = tex;
+
+                    CacheSpriteSheetImage(id, rect, tex, Finally, forcedHeight);
+                }));
+            }
+        }
+
+        private void CacheSpriteSheetImage(string id, ImageRect rect, Texture2D tex, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        {
+            int spriteWidth = rect.width, spriteHeight = rect.height;
+            Sprite sprite = Sprite.Create(tex, new Rect(rect.x, tex.height - rect.y - spriteHeight, spriteWidth, spriteHeight), new Vector2(0, 0));
+            sprite.texture.wrapMode = TextureWrapMode.Clamp;
+            EnhancedImageInfo ret = null;
+            if (sprite != null)
+            {
+                if (forcedHeight != -1)
+                {
+                    SetImageHeight(ref spriteWidth, ref spriteHeight, forcedHeight);
+                }
+                ret = new EnhancedImageInfo()
+                {
+                    ImageId = id,
+                    Sprite = sprite,
+                    Width = spriteWidth,
+                    Height = spriteHeight,
+                    AnimControllerData = null
+                };
+                _cachedImageInfo[id] = ret;
+            }
+            Finally?.Invoke(ret);
+        }
 
         internal static void ClearCache()
         {

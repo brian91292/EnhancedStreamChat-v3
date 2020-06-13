@@ -1,0 +1,55 @@
+﻿<bg xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='https://monkeymanboy.github.io/BSML-Docs/ https://raw.githubusercontent.com/monkeymanboy/BSML-Docs/gh-pages/BSMLSchema.xsd'>
+  <clickable-image src='EnhancedStreamChat.Resources.Settings.png' click-event='show-settings' ignore-layout='true' anchor-min-x='0.96' anchor-max-x='0.96' anchor-min-y='0.04' anchor-max-y='0.04' size-delta-x='7' preserve-aspect='true' default-color='#FFFFFF11' highlight-color='#FFFFFFFF'></clickable-image>
+  <modal show-event='show-settings' hide-event='hide-settings' move-to-center="true" click-off-closes="true" size-delta-x='~settings-width' size-delta-y='100'>
+    <vertical child-control-height='false' child-expand-height='false' pad-top='6'>
+      <!--<horizontal bg='panel-top' pad-left='15' pad-right='15' horizontal-fit='PreferredSize'>
+          <text text='Enhanced Stream Chat v3' align='Center' font-size='8'/>
+        </horizontal>-->
+      <tab-selector tab-tag='settings-tab'></tab-selector>
+      <vertical pad-top='77'>
+        <button text='Close' click-event='hide-settings'></button>
+      </vertical>
+      <tab tags ='settings-tab' tab-name='Layout'>
+        <vertical pad='10' pad-top='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
+          <bool-setting text='Allow Movement' pref-height='6' value='allow-movement' apply-on-change='true'></bool-setting>
+          <bool-setting text='Reverse Chat Order' pref-height='6' value='reverse-chat-order' apply-on-change='true'></bool-setting>
+          <slider-setting text='Chat Width' min='5' max='1000' increment='5' pref-height='6' value='chat-width' apply-on-change='true' integer-only='true'></slider-setting>
+          <slider-setting text='Chat Height' min='5' max='1000' increment='5' pref-height='6' value='chat-height' apply-on-change='true' integer-only='true'></slider-setting>
+          <slider-setting text='Font Size' min='1' max='20' increment='0.1' pref-height='6' value='font-size' apply-on-change='true'></slider-setting>
+        </vertical>
+      </tab>
+      <tab tags ='settings-tab' tab-name='Colors'>
+        <vertical pad='10' pad-top='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
+          <color-setting id='background-color-setting' value='background-color' text='Background Color' apply-on-change='true'></color-setting>
+          <color-setting id='accent-color-setting' value='accent-color' text='Accent Color' apply-on-change='true'></color-setting>
+          <color-setting id='highlight-color-setting' value='highlight-color' text='Highlight Color' apply-on-change='true'></color-setting>
+          <color-setting id='ping-color-setting' value='ping-color' text='Ping Color' apply-on-change='true'></color-setting>
+          <color-setting id='text-color-setting' value='text-color' text='Text Color' apply-on-change='true'></color-setting>
+        </vertical>
+      </tab>
+      <tab tags ='settings-tab' tab-name='Login/Channels'>
+        <vertical pad='10' pad-top='70' vertical-fit='PreferredSize' child-expand-height='false' child-align='MiddleCenter' pref-width='~settings-width'>
+          <text text='Login and channel configuration are currently done via your default browser in the new ChatCore webapp.' font-size='5' word-wrapping='true' align='Center'></text>
+          <horizontal child-expand-width='false' child-align='MiddleCenter' pad-top='10'>
+            <text text='To launch the ChatCore web app,&#xA0;' font-size='5'></text>
+            <clickable-text text='click here' hover-hint='The ChatCore web app will allow you to manage chat service logins, add/remove channels, and configure several other preferences.' default-color='#00bcff' on-click='launch-web-app' highlight-color='cyan' font-size='5'></clickable-text>
+            <text text='.'  font-size='5'></text>
+          </horizontal>
+        </vertical>
+      </tab>
+      <tab tags ='settings-tab' tab-name='About'>
+        <vertical ignore-layout='true' vertical-fit='PreferredSize' child-expand-height='false' anchor-min-x='0' anchor-max-x='0' pad-top='155'>
+          <clickable-text text='GitHub' hover-hint='Follow the project on GitHub!' default-color='#00bcff' on-click='launch-github' highlight-color='cyan' font-size='5' ></clickable-text>
+        </vertical>
+        <vertical ignore-layout='true' vertical-fit='PreferredSize' child-expand-height='false' anchor-min-x='1' anchor-max-x='1' pad-top='155'>
+          <!--<clickable-text text='Donate' hover-hint='Buy me a pizza!' default-color='#00bcff' on-click='launch-kofi' highlight-color='cyan' font-size='5' ></clickable-text>-->
+          <text text="~mod-version" font-size='4.5' word-wrapping='true' align='Center'></text>
+        </vertical>
+        <vertical pad='10' spacing='3' pad-top='72' vertical-fit='PreferredSize' child-expand-height='false' child-align='MiddleCenter' pref-width='~settings-width'>
+          <clickable-image src='EnhancedStreamChat.Resources.PizzaDog.jpg' hover-hint="Click to feed Pizza Dog a damn pizza." on-click='launch-kofi' preferred-height='35' preserve-aspect='true' highlight-color='#aaaaaa'></clickable-image>
+          <text text="Enhanced Stream Chat is provided free of charge, and always will be. If you want to show some support, click on the Pizza Dog to open the donation page in your default browser." font-size='4.5' word-wrapping='true' align='Center'></text>
+        </vertical>
+      </tab>
+    </vertical>
+  </modal>
+</bg>

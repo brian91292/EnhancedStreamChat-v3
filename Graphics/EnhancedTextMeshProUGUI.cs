@@ -24,7 +24,7 @@ namespace EnhancedStreamChat.Graphics
         private static object _lock = new object();
         public event Action OnLatePreRenderRebuildComplete;
 
-        private static ObjectPool<EnhancedImage> _imagePool = new ObjectPool<EnhancedImage>(
+        private static ObjectPool<EnhancedImage> _imagePool = new ObjectPool<EnhancedImage>(50,
             Constructor: () =>
             {
                 var img = new GameObject().AddComponent<EnhancedImage>();
@@ -71,28 +71,32 @@ namespace EnhancedStreamChat.Graphics
                 MainThreadInvoker.Invoke(() =>
                 {
                     ClearImages();
-                    for (int i = 0; i < textInfo.characterCount; i++)
+
+                });
+                for (int i = 0; i < textInfo.characterCount; i++)
+                {
+                    TMP_CharacterInfo c = textInfo.characterInfo[i];
+                    if (!c.isVisible || string.IsNullOrEmpty(text) || c.index >= text.Length)
                     {
-                        TMP_CharacterInfo c = textInfo.characterInfo[i];
-                        if (!c.isVisible || string.IsNullOrEmpty(text) || c.index >= text.Length)
-                        {
-                            // Skip invisible/empty/out of range chars
-                            continue;
-                        }
+                        // Skip invisible/empty/out of range chars
+                        continue;
+                    }
 
-                        uint character = text[c.index];
-                        if(c.index + 1 < text.Length && char.IsSurrogatePair(text[c.index], text[c.index + 1]))
-                        {
-                            // If it's a surrogate pair, convert the character
-                            character = (uint)char.ConvertToUtf32(text[c.index], text[c.index + 1]);
-                        }
+                    uint character = text[c.index];
+                    if(c.index + 1 < text.Length && char.IsSurrogatePair(text[c.index], text[c.index + 1]))
+                    {
+                        // If it's a surrogate pair, convert the character
+                        character = (uint)char.ConvertToUtf32(text[c.index], text[c.index + 1]);
+                    }
 
-                        if (FontInfo == null || !FontInfo.TryGetImageInfo(character, out var imageInfo) || imageInfo is null)
-                        {
-                            // Skip characters that have no imageInfo registered
-                            continue;
-                        }
+                    if (FontInfo == null || !FontInfo.TryGetImageInfo(character, out var imageInfo) || imageInfo is null)
+                    {
+                        // Skip characters that have no imageInfo registered
+                        continue;
+                    }
 
+                    MainThreadInvoker.Invoke(() =>
+                    {
                         var img = _imagePool.Alloc();
                         try
                         {
@@ -105,7 +109,7 @@ namespace EnhancedStreamChat.Graphics
                             {
                                 img.sprite = imageInfo.Sprite;
                             }
-                            img.material = BeatSaberUtils.UINoGlow;
+                            img.material = BeatSaberUtils.UINoGlowMaterial;
                             img.rectTransform.localScale = new Vector3(fontScale * 1.08f, fontScale * 1.08f, fontScale * 1.08f);
                             img.rectTransform.sizeDelta = new Vector2(imageInfo.Width, imageInfo.Height);
                             img.rectTransform.SetParent(rectTransform, false);
@@ -119,8 +123,8 @@ namespace EnhancedStreamChat.Graphics
                             Logger.log.Error($"Exception while trying to overlay sprite. {ex.ToString()}");
                             _imagePool.Free(img);
                         }
-                    }
-                });
+                    });
+                }
             }
             base.Rebuild(update);
             if (update == CanvasUpdate.LatePreRender)

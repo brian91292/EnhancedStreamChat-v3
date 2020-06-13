@@ -10,6 +10,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TMPro;
+using UnityEngine;
+using BeatSaberMarkupLanguage.Animations;
+using System.Collections;
 
 namespace EnhancedStreamChat.Chat
 {
@@ -24,7 +27,7 @@ namespace EnhancedStreamChat.Chat
         {
             List<Task<EnhancedImageInfo>> tasks = new List<Task<EnhancedImageInfo>>();
             HashSet<string> pendingEmoteDownloads = new HashSet<string>();
-            
+
             foreach (var emote in msg.Emotes)
             {
                 if (pendingEmoteDownloads.Contains(emote.Id))
@@ -35,17 +38,37 @@ namespace EnhancedStreamChat.Chat
                 {
                     pendingEmoteDownloads.Add(emote.Id);
                     TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
-                    SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.DownloadImage(emote.Uri, "Emote", emote.Id, emote.IsAnimated, (info) =>
+                    switch (emote.Type)
                     {
-                        if (info != null)
-                        {
-                            if(!font.TryRegisterImageInfo(info, out var character))
+                        case EmoteType.SingleImage:
+                            SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.TryCacheSingleImage(emote.Id, emote.Uri, emote.IsAnimated, (info) => {
+                                if (info != null)
+                                {
+                                    if (!font.TryRegisterImageInfo(info, out var character))
+                                    {
+                                        Logger.log.Warn($"Failed to register emote \"{emote.Id}\" in font {font.Font.name}.");
+                                    }
+                                }
+                                tcs.SetResult(info);
+                            }, forcedHeight: 110));
+                            break;
+                        case EmoteType.SpriteSheet:
+                            ChatImageProvider.instance.TryCacheSpriteSheetImage(emote.Id, emote.Uri, emote.UVs, (info) =>
                             {
-                                Logger.log.Warn($"Failed to register emote \"{emote.Id}\" in font {font.Font.name}.");
-                            }
-                        }
-                        tcs.SetResult(info);
-                    }));
+                                if (info != null)
+                                {
+                                    if (!font.TryRegisterImageInfo(info, out var character))
+                                    {
+                                        Logger.log.Warn($"Failed to register emote \"{emote.Id}\" in font {font.Font.name}.");
+                                    }
+                                }
+                                tcs.SetResult(info);
+                            }, forcedHeight: 110);
+                            break;
+                        default:
+                            tcs.SetResult(null);
+                            break;
+                    }
                     tasks.Add(tcs.Task);
                 }
             }
@@ -56,12 +79,12 @@ namespace EnhancedStreamChat.Chat
                 {
                     continue;
                 }
+
                 if (!font.CharacterLookupTable.ContainsKey(badge.Id))
                 {
                     pendingEmoteDownloads.Add(badge.Id);
                     TaskCompletionSource<EnhancedImageInfo> tcs = new TaskCompletionSource<EnhancedImageInfo>();
-                    SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.DownloadImage(badge.Uri, "Badge", badge.Id, false, (info) =>
-                    {
+                    SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.TryCacheSingleImage(badge.Id, badge.Uri, false, (info) => {
                         if (info != null)
                         {
                             if (!font.TryRegisterImageInfo(info, out var character))
@@ -70,7 +93,7 @@ namespace EnhancedStreamChat.Chat
                             }
                         }
                         tcs.SetResult(info);
-                    }));
+                    }, forcedHeight: 100));
                     tasks.Add(tcs.Task);
                 }
             }
@@ -83,7 +106,7 @@ namespace EnhancedStreamChat.Chat
         {
             try
             {
-                if(!PrepareImages(msg, font))
+                if (!PrepareImages(msg, font))
                 {
                     Logger.log.Warn($"Failed to prepare some/all images for msg \"{msg.Message}\"!");
                     //return msg.Message;
@@ -100,7 +123,7 @@ namespace EnhancedStreamChat.Chat
                     badges.Push(badgeInfo);
                 }
 
-                StringBuilder sb = new StringBuilder(msg.Message);
+                StringBuilder sb = new StringBuilder(msg.Message); // Replace all instances of < with a zero-width non-breaking character
                 foreach (var emote in msg.Emotes)
                 {
                     if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
@@ -109,20 +132,30 @@ namespace EnhancedStreamChat.Chat
                         continue;
                     }
                     //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
-                    if(!font.TryGetCharacter(replace.ImageId, out uint character))
+                    if (!font.TryGetCharacter(replace.ImageId, out uint character))
                     {
                         Logger.log.Warn($"Emote {emote.Name} was missing from the character dict! Font hay have run out of usable characters.");
                         continue;
                     }
 
-                    // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
-                    sb.Replace(emote.Name, emote switch
+                    try
                     {
-                        TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0</noparse><color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color><noparse>",
-                        _ => char.ConvertFromUtf32((int)character)
-                    }, 
-                    emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                        // Replace emotes by index, in reverse order (msg.Emotes is sorted by emote.StartIndex in descending order)
+                        sb.Replace(emote.Name, emote switch
+                        {
+                            TwitchEmote t when t.Bits > 0 => $"{char.ConvertFromUtf32((int)character)}\u00A0<color={t.Color}><size=77%><b>{t.Bits}\u00A0</b></size></color>",
+                            _ => char.ConvertFromUtf32((int)character)
+                        },
+                        emote.StartIndex, emote.EndIndex - emote.StartIndex + 1);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.log.Error($"An unknown error occurred while trying to swap emote {emote.Name} into string of length {sb.Length} at location ({emote.StartIndex}, {emote.EndIndex})");
+                    }
                 }
+
+                // Escape all html tags in the message
+                sb.Replace("<", "<\u2060");
 
                 if (msg.IsSystemMessage)
                 {
@@ -132,20 +165,16 @@ namespace EnhancedStreamChat.Chat
                 }
                 else
                 {
-                    // Don't parse html tags in the message
-                    sb.Insert(0, "<noparse>");
-                    sb.Append("</noparse>");
-
                     if (msg.IsActionMessage)
                     {
                         // Message becomes the color of their name if it's an action message
-                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.Name}</b> ");
+                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.DisplayName}</b> ");
                         sb.Append("</color>");
                     }
                     else
                     {
                         // Insert username w/ color
-                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.Name}</b></color>: ");
+                        sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.DisplayName}</b></color>: ");
                     }
 
                     for (int i = 0; i < msg.Sender.Badges.Length; i++)
