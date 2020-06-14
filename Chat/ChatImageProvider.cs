@@ -126,26 +126,19 @@ namespace EnhancedStreamChat.Chat
                 Finally?.Invoke(info);
                 yield break;
             }
-
             byte[] bytes = new byte[0];
-            yield return ChatImageProvider.instance.DownloadContent(uri, (b) =>
-            {
-                bytes = b;
-            });
-
-            if (bytes.Length > 0)
-            {
-                //Logger.log.Info($"Finished download content for emote {id}!");
-                yield return OnSingleImageCached(bytes, id, isAnimated, Finally, forcedHeight);
-            }
-            else
-            {
-                Logger.log.Info($"Received no bytes when requesting image with id {id}!");
-            }
+            yield return DownloadContent(uri, (b) => bytes = b);
+            yield return OnSingleImageCached(bytes, id, isAnimated, Finally, forcedHeight);
         }
 
         public IEnumerator OnSingleImageCached(byte[] bytes, string id, bool isAnimated, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
         {
+            if(bytes.Length == 0)
+            {
+                Finally(null);
+                yield break;
+            }
+
             Sprite sprite = null;
             int spriteWidth = 0, spriteHeight = 0;
             AnimationControllerData animControllerData = null;
@@ -194,33 +187,28 @@ namespace EnhancedStreamChat.Chat
             Finally?.Invoke(ret);
         }
 
-        public void TryCacheSpriteSheetImage(string id, string uri, ImageRect rect, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        public IEnumerator TryCacheSpriteSheetImage(string id, string uri, ImageRect rect, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
         {
             if (_cachedImageInfo.TryGetValue(id, out var info))
             {
                 Finally?.Invoke(info);
-                return;
+                yield break;
             }
-
-            if(_cachedSpriteSheets.TryGetValue(uri, out var tex))
+            if(!_cachedSpriteSheets.TryGetValue(uri, out var tex) || tex == null)
             {
-                CacheSpriteSheetImage(id, rect, tex, Finally, forcedHeight);
+                yield return DownloadContent(uri, (bytes) => tex = GraphicUtils.LoadTextureRaw(bytes));
+                _cachedSpriteSheets[uri] = tex;
             }
-            else
-            {
-                StartCoroutine(ChatImageProvider.instance.DownloadContent(uri, (bytes) =>
-                {
-                    Logger.log.Info($"Finished download content for emote {id}!");
-                    var tex = GraphicUtils.LoadTextureRaw(bytes);
-                    _cachedSpriteSheets[uri] = tex;
-
-                    CacheSpriteSheetImage(id, rect, tex, Finally, forcedHeight);
-                }));
-            }
+            CacheSpriteSheetImage(id, rect, tex, Finally, forcedHeight);
         }
 
         private void CacheSpriteSheetImage(string id, ImageRect rect, Texture2D tex, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
         {
+            if(tex == null)
+            {
+                Finally?.Invoke(null);
+                return;
+            }
             int spriteWidth = rect.width, spriteHeight = rect.height;
             Sprite sprite = Sprite.Create(tex, new Rect(rect.x, tex.height - rect.y - spriteHeight, spriteWidth, spriteHeight), new Vector2(0, 0));
             sprite.texture.wrapMode = TextureWrapMode.Clamp;

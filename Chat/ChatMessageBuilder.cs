@@ -53,7 +53,7 @@ namespace EnhancedStreamChat.Chat
                             }, forcedHeight: 110));
                             break;
                         case EmoteType.SpriteSheet:
-                            ChatImageProvider.instance.TryCacheSpriteSheetImage(emote.Id, emote.Uri, emote.UVs, (info) =>
+                            SharedCoroutineStarter.instance.StartCoroutine(ChatImageProvider.instance.TryCacheSpriteSheetImage(emote.Id, emote.Uri, emote.UVs, (info) =>
                             {
                                 if (info != null)
                                 {
@@ -63,7 +63,7 @@ namespace EnhancedStreamChat.Chat
                                     }
                                 }
                                 tcs.SetResult(info);
-                            }, forcedHeight: 110);
+                            }, forcedHeight: 110));
                             break;
                         default:
                             tcs.SetResult(null);
