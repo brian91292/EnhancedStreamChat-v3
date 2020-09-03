@@ -1,5 +1,4 @@
 ﻿using BeatSaberMarkupLanguage;
-using BeatSaberMarkupLanguage.Attributes;
 using BeatSaberMarkupLanguage.FloatingScreen;
 using BeatSaberMarkupLanguage.ViewControllers;
 using BS_Utils.Utilities;
@@ -10,13 +9,10 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using VRUIControls;
 using Color = UnityEngine.Color;
 using Image = UnityEngine.UI.Image;
@@ -144,7 +140,7 @@ namespace EnhancedStreamChat.Chat
         {
             if (_chatScreen == null)
             {
-                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.Euler(ChatRotation));
+                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.identity);
                 var canvas = _chatScreen.GetComponent<Canvas>();
                 canvas.sortingOrder = 3;
                 _chatScreen.SetRootViewController(this, true);
@@ -155,6 +151,7 @@ namespace EnhancedStreamChat.Chat
                 var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
                 renderer.material = _chatMoverMaterial;
                 _chatScreen.transform.SetParent(_rootGameObject.transform);
+                _chatScreen.ScreenRotation = Quaternion.Euler(ChatRotation);
                 _bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
                 _bg.material = Instantiate(BeatSaberUtils.UINoGlowMaterial);
                 _bg.color = BackgroundColor;
