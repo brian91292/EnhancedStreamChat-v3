@@ -1,13 +1,7 @@
-﻿using ChatCore;
-using ChatCore.Config;
-using ChatCore.Models;
+﻿using ChatCore.Config;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace EnhancedStreamChat.Chat
@@ -66,6 +60,8 @@ namespace EnhancedStreamChat.Chat
         public float FontSize = 3.4f;
         [ConfigMeta(Comment = "Allow movement of the chat")]
         public bool AllowMovement = false;
+        [ConfigMeta(Comment = "Sync positions and rotations for the chat in menu and in-game")]
+        public bool SyncOrientation = false;
         [ConfigMeta(Comment = "Reverse the order of the chat")]
         public bool ReverseChatOrder = false;
 

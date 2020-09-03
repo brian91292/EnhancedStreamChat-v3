@@ -2,12 +2,7 @@
 using BeatSaberMarkupLanguage.Components.Settings;
 using BeatSaberMarkupLanguage.Parser;
 using BeatSaberMarkupLanguage.ViewControllers;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -179,14 +174,16 @@ namespace EnhancedStreamChat.Chat
             get => _isInGame ? _chatConfig.Song_ChatPosition : _chatConfig.Menu_ChatPosition;
             set
             {
-                if (_isInGame)
+                if (_isInGame || SyncOrientation)
                 {
                     _chatConfig.Song_ChatPosition = value;
                 }
-                else
+
+                if (!_isInGame || SyncOrientation)
                 {
                     _chatConfig.Menu_ChatPosition = value;
                 }
+
                 _chatScreen.ScreenPosition = value;
                 NotifyPropertyChanged();
             }
@@ -198,14 +195,16 @@ namespace EnhancedStreamChat.Chat
             get => _isInGame ? _chatConfig.Song_ChatRotation : _chatConfig.Menu_ChatRotation;
             set
             {
-                if (_isInGame)
+                if (_isInGame || SyncOrientation)
                 {
                     _chatConfig.Song_ChatRotation = value;
                 }
-                else
+
+                if (!_isInGame || SyncOrientation)
                 {
                     _chatConfig.Menu_ChatRotation = value;
                 }
+
                 _chatScreen.ScreenRotation = Quaternion.Euler(value);
                 NotifyPropertyChanged();
             }
@@ -219,6 +218,24 @@ namespace EnhancedStreamChat.Chat
             {
                 _chatConfig.AllowMovement = value;
                 _chatScreen.ShowHandle = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [UIValue("sync-orientation")]
+        public bool SyncOrientation
+        {
+            get => _chatConfig.SyncOrientation;
+            set
+            {
+                _chatConfig.SyncOrientation = value;
+
+                if (value)
+                {
+                    ChatPosition = ChatPosition;
+                    ChatRotation = ChatRotation;
+                }
+
                 NotifyPropertyChanged();
             }
         }
