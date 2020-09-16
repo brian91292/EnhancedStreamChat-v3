@@ -12,6 +12,7 @@
       <tab tags ='settings-tab' tab-name='Layout'>
         <vertical pad='10' pad-top='5' child-control-height='false' child-expand-height='false' child-align='UpperCenter' pref-width='~settings-width'>
           <bool-setting text='Allow Movement' pref-height='6' value='allow-movement' apply-on-change='true'></bool-setting>
+          <bool-setting text='Same position in-game/menu' hover-hint='This setting makes it possible to set the position (and rotation) of the chat for both in-game as menu at the same time.' pref-height='6' value='sync-orientation' apply-on-change='true'/>
           <bool-setting text='Reverse Chat Order' pref-height='6' value='reverse-chat-order' apply-on-change='true'></bool-setting>
           <slider-setting text='Chat Width' min='5' max='1000' increment='5' pref-height='6' value='chat-width' apply-on-change='true' integer-only='true'></slider-setting>
           <slider-setting text='Chat Height' min='5' max='1000' increment='5' pref-height='6' value='chat-height' apply-on-change='true' integer-only='true'></slider-setting>
