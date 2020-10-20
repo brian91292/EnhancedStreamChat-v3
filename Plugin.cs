@@ -14,7 +14,7 @@ using System.Reflection;
 
 namespace EnhancedStreamChat
 {
-    [Plugin(RuntimeOptions.DynamicInit)]
+    [Plugin(RuntimeOptions.SingleStartInit)]
     public class Plugin
     {
         internal static Plugin instance { get; private set; }
@@ -31,19 +31,22 @@ namespace EnhancedStreamChat
             Logger.log = logger;
             Logger.log.Debug("Logger initialized.");
             var config = ChatConfig.instance;
-        }
 
-        [OnEnable]
-        public void OnEnable()
+        }
+        [OnStart]
+        public void OnApplicationStart()
         {
-            try
+            BS_Utils.Utilities.BSEvents.lateMenuSceneLoadedFresh += (x) =>
             {
-                ChatManager.instance.enabled = true;
-            }
-            catch(Exception ex)
-            {
-                Logger.log.Error(ex);
-            }
+                try
+                {
+                    ChatManager.instance.enabled = true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.log.Error(ex);
+                }
+            };
         }
 
         [OnDisable]

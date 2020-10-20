@@ -1,11 +1,13 @@
 ﻿using BeatSaberMarkupLanguage;
 using BeatSaberMarkupLanguage.Attributes;
+using BeatSaberMarkupLanguage.Components;
 using BeatSaberMarkupLanguage.FloatingScreen;
 using BeatSaberMarkupLanguage.ViewControllers;
 using BS_Utils.Utilities;
 using ChatCore.Interfaces;
 using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
+using HMUI;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -33,11 +35,13 @@ namespace EnhancedStreamChat.Chat
 
         private void Awake()
         {
-            DontDestroyOnLoad(gameObject);
             _chatConfig = ChatConfig.instance;
             CreateChatFont();
             SetupScreens();
-            (transform as RectTransform).pivot = new Vector2(0.5f, 0f);
+
+            /// Update message position origin
+            (transform.GetChild(0).transform as RectTransform).pivot = new Vector2(0.5f, 0f);
+
             TextPool = new ObjectPool<EnhancedTextMeshProUGUIWithBackground>(25,
                 Constructor: () =>
                 {
@@ -49,7 +53,7 @@ namespace EnhancedStreamChat.Chat
                     msg.SubText.enableWordWrapping = true;
                     msg.SubText.FontInfo = _chatFont;
                     (msg.transform as RectTransform).pivot = new Vector2(0.5f, 0);
-                    msg.transform.SetParent(transform, false);
+                    msg.transform.SetParent(transform.GetChild(0).transform, false);
                     msg.gameObject.SetActive(false);
                     UpdateMessage(msg);
                     return msg;
@@ -76,12 +80,25 @@ namespace EnhancedStreamChat.Chat
                     }
                 }
             );
-            ChatConfig.instance.OnConfigChanged += Instance_OnConfigChanged;
-            BSEvents.menuSceneActive += BSEvents_menuSceneActive;
-            BSEvents.gameSceneActive += BSEvents_gameSceneActive;
+
             _waitForEndOfFrame = new WaitForEndOfFrame();
             _waitUntilMessagePositionsNeedUpdate = new WaitUntil(() => _updateMessagePositions == true);
-            StartCoroutine(UpdateMessagePositions());
+        }
+        protected override void DidActivate(bool p_FirstActivation, bool p_AddedToHierarchy, bool p_ScreenSystemEnabling)
+        {
+            /// Forward event
+            base.DidActivate(p_FirstActivation, p_AddedToHierarchy, p_ScreenSystemEnabling);
+
+            if (p_FirstActivation)
+            {
+                GetComponent<CurvedCanvasSettings>().SetRadius(0f);
+
+                ChatConfig.instance.OnConfigChanged += Instance_OnConfigChanged;
+                BSEvents.menuSceneActive += BSEvents_menuSceneActive;
+                BSEvents.gameSceneActive += BSEvents_gameSceneActive;
+
+                SharedCoroutineStarter.instance.StartCoroutine(UpdateMessagePositions());
+            }
         }
 
         // TODO: eventually figure out a way to make this more modular incase we want to create multiple instances of ChatDisplay
@@ -92,7 +109,7 @@ namespace EnhancedStreamChat.Chat
             ChatConfig.instance.OnConfigChanged -= Instance_OnConfigChanged;
             BSEvents.menuSceneActive -= BSEvents_menuSceneActive;
             BSEvents.gameSceneActive -= BSEvents_gameSceneActive;
-            StopAllCoroutines();
+            SharedCoroutineStarter.instance.StopCoroutine(UpdateMessagePositions());
             foreach (var msg in _messages)
             {
                 msg.OnLatePreRenderRebuildComplete -= OnRenderRebuildComplete;
@@ -130,24 +147,22 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private bool _applicationQuitting = false;
-        private void OnApplicationQuit()
-        {
-            _applicationQuitting = true;
-        }
-
         private FloatingScreen _chatScreen;
         private GameObject _rootGameObject;
         private Material _chatMoverMaterial;
-        private Image _bg;
+        private ImageView _bg = null;
         private void SetupScreens()
         {
             if (_chatScreen == null)
             {
-                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.Euler(ChatRotation));
+                _chatScreen = FloatingScreen.CreateFloatingScreen(new Vector2(ChatWidth, ChatHeight), true, ChatPosition, Quaternion.identity);
+                _chatScreen.GetComponent<CurvedCanvasSettings>().SetRadius(0f);
+
                 var canvas = _chatScreen.GetComponent<Canvas>();
                 canvas.sortingOrder = 3;
-                _chatScreen.SetRootViewController(this, true);
+
+                _chatScreen.SetRootViewController(this, AnimationType.None);
+
                 _rootGameObject = new GameObject();
                 DontDestroyOnLoad(_rootGameObject);
                 _chatMoverMaterial = Instantiate(BeatSaberUtils.UINoGlowMaterial);
@@ -155,10 +170,16 @@ namespace EnhancedStreamChat.Chat
                 var renderer = _chatScreen.handle.gameObject.GetComponent<Renderer>();
                 renderer.material = _chatMoverMaterial;
                 _chatScreen.transform.SetParent(_rootGameObject.transform);
-                _bg = _chatScreen.gameObject.GetComponent<UnityEngine.UI.Image>();
+                _chatScreen.ScreenRotation = Quaternion.Euler(ChatRotation);
+
+                _chatScreen.HandleReleased += floatingScreen_OnRelease;
+
+                _bg = _chatScreen.transform.GetChild(0).gameObject.AddComponent<ImageView>();
+                _bg.sprite = Resources.FindObjectsOfTypeAll<Sprite>().First(x => x.name == "MainScreenMask");
+                _bg.type = Image.Type.Sliced;
                 _bg.material = Instantiate(BeatSaberUtils.UINoGlowMaterial);
+                _bg.preserveAspect = true;
                 _bg.color = BackgroundColor;
-                AddToVRPointer();
             }
         }
 
@@ -167,17 +188,17 @@ namespace EnhancedStreamChat.Chat
             UpdateChatUI();
         }
 
-        private void floatingScreen_OnRelease(Vector3 pos, Quaternion rot)
+        private void floatingScreen_OnRelease(object sender, FloatingScreenHandleEventArgs e)
         {
             if (_isInGame)
             {
-                _chatConfig.Song_ChatPosition = pos;
-                _chatConfig.Song_ChatRotation = rot.eulerAngles;
+                _chatConfig.Song_ChatPosition = e.Position;
+                _chatConfig.Song_ChatRotation = e.Rotation.eulerAngles;
             }
             else
             {
-                _chatConfig.Menu_ChatPosition = pos;
-                _chatConfig.Menu_ChatRotation = rot.eulerAngles;
+                _chatConfig.Menu_ChatPosition = e.Position;
+                _chatConfig.Menu_ChatRotation = e.Rotation.eulerAngles;
             }
             _chatConfig.Save();
         }
@@ -185,36 +206,13 @@ namespace EnhancedStreamChat.Chat
         private void BSEvents_gameSceneActive()
         {
             _isInGame = true;
-            AddToVRPointer();
             UpdateChatUI();
         }
 
         private void BSEvents_menuSceneActive()
         {
             _isInGame = false;
-            AddToVRPointer();
             UpdateChatUI();
-        }
-
-        private void AddToVRPointer()
-        {
-            VRPointer pointer = null;
-            if (_isInGame)
-            {
-                pointer = Resources.FindObjectsOfTypeAll<VRPointer>().Last();
-            }
-            else
-            {
-                pointer = Resources.FindObjectsOfTypeAll<VRPointer>().First();
-            }
-            if (_chatScreen.screenMover != null)
-            {
-                DestroyImmediate(_chatScreen.screenMover);
-                _chatScreen.screenMover = pointer.gameObject.AddComponent<FloatingScreenMoverPointer>();
-                _chatScreen.screenMover.Init(_chatScreen);
-                _chatScreen.screenMover.OnRelease += floatingScreen_OnRelease;
-                _chatScreen.screenMover.transform.SetAsFirstSibling();
-            }
         }
 
         private bool _updateMessagePositions = false;
@@ -222,7 +220,7 @@ namespace EnhancedStreamChat.Chat
         private WaitForEndOfFrame _waitForEndOfFrame;
         private IEnumerator UpdateMessagePositions()
         {
-            while (!_applicationQuitting)
+            while (this.isInViewControllerHierarchy)
             {
                 yield return _waitUntilMessagePositionsNeedUpdate;
                 yield return _waitForEndOfFrame;
@@ -389,15 +387,17 @@ namespace EnhancedStreamChat.Chat
 
         public void OnChatCleared(string userId)
         {
+            if (userId == null)
+                return;
+
             MainThreadInvoker.Invoke(() =>
             {
                 foreach (var msg in _messages)
                 {
                     if (msg.Text.ChatMessage == null)
-                    {
                         continue;
-                    }
-                    if (userId == null || msg.Text.ChatMessage.Sender.Id == userId)
+
+                    if (msg.Text.ChatMessage.Sender.Id == userId)
                     {
                         ClearMessage(msg);
                     }
