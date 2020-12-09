@@ -1,5 +1,3 @@
-# NOTE: This mod is no longer being maintained by me. For any future updates, [check here](https://github.com/ErisApps/EnhancedStreamChat-v3).
-
 # EnhancedStreamChat v3
 Enhanced Stream Chat is a rich text chat integration mod for Beat Saber. It supports emotes, emojis, badges, and any other image that may come inline in a chat message through any of the supported services.
 
