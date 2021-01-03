@@ -41,7 +41,15 @@ namespace EnhancedStreamChat.Chat
             _svcs.OnChannelResourceDataCached += QueueOrSendOnChannelResourceDataCached;
             ChatImageProvider.TouchInstance();
             Task.Run(HandleOverflowMessageQueue);
-            BSEvents.menuSceneLoadedFresh += BSEvents_menuSceneLoadedFresh;
+
+            if (_chatDisplay != null)
+            {
+                DestroyImmediate(_chatDisplay.gameObject);
+                _chatDisplay = null;
+                MainThreadInvoker.ClearQueue();
+            }
+            _chatDisplay = BeatSaberUI.CreateViewController<ChatDisplay>();
+            _chatDisplay.gameObject.SetActive(true);
         }
 
         private void _sc_OnLogReceived(CustomLogLevel level, string category, string log)
@@ -68,7 +76,6 @@ namespace EnhancedStreamChat.Chat
                 _svcs.OnChatCleared -= QueueOrSendOnClearChat;
                 _svcs.OnMessageCleared -= QueueOrSendOnClearMessage;
                 _svcs.OnChannelResourceDataCached -= QueueOrSendOnChannelResourceDataCached;
-                BSEvents.menuSceneLoadedFresh -= BSEvents_menuSceneLoadedFresh;
             }
             if (_sc != null)
             {
@@ -85,16 +92,6 @@ namespace EnhancedStreamChat.Chat
         }
 
         ChatDisplay _chatDisplay;
-        private void BSEvents_menuSceneLoadedFresh()
-        {
-            if (_chatDisplay != null)
-            {
-                DestroyImmediate(_chatDisplay.gameObject);
-                _chatDisplay = null;
-                MainThreadInvoker.ClearQueue();
-            }
-            _chatDisplay = BeatSaberUI.CreateViewController<ChatDisplay>();
-        }
 
         private ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
         private SemaphoreSlim _msgLock = new SemaphoreSlim(1, 1);

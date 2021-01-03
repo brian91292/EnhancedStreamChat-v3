@@ -106,7 +106,7 @@ namespace EnhancedStreamChat.Chat
             set
             {
                 _chatConfig.BackgroundColor = value;
-                _chatScreen.gameObject.GetComponent<Image>().material.color = value;
+                if (_bg != null) _bg.material.color = value;
                 NotifyPropertyChanged();
             }
         }
